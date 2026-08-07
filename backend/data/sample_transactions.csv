@@ -1,0 +1,30 @@
+date,type,category,amount,description
+2025-01-03,income,sales,50000,Client payment - Project Alpha
+2025-01-05,expense,marketing,8000,Google Ads campaign
+2025-01-07,expense,rent,15000,Office rent - Koramangala
+2025-01-10,income,sales,30000,Product sale - Enterprise license
+2025-01-12,expense,software,5000,SaaS subscriptions (Slack + Notion)
+2025-01-15,expense,salary,40000,Employee salary - Developer
+2025-01-18,expense,logistics,7000,Delivery charges - Delhivery
+2025-01-21,income,sales,20000,Client payment - Project Beta
+2025-01-25,expense,utilities,3000,Electricity bill
+2025-01-28,expense,misc,2000,Office supplies
+2025-02-02,income,sales,55000,Client payment - Project Gamma
+2025-02-05,expense,marketing,12000,Instagram + Facebook Ads
+2025-02-08,expense,rent,15000,Office rent - Koramangala
+2025-02-12,income,sales,35000,Product sale - SMB license
+2025-02-15,expense,salary,42000,Employee salary - Developer
+2025-02-18,expense,software,6000,AWS hosting + tools
+2025-02-22,income,freelance,18000,Consulting income
+2025-02-25,expense,travel,8000,Client meeting travel - Mumbai
+2025-02-28,expense,utilities,3200,Electricity + Internet
+2025-03-03,income,sales,45000,Client payment - Project Delta
+2025-03-06,expense,marketing,15000,Google + Meta Ads
+2025-03-09,expense,rent,15000,Office rent - Koramangala
+2025-03-12,income,sales,28000,Product sale
+2025-03-15,expense,salary,42000,Employee salary - Developer
+2025-03-18,expense,salary,35000,Employee salary - Designer
+2025-03-21,income,sales,40000,Client payment - Retainer
+2025-03-24,expense,software,7500,Annual tool renewals
+2025-03-27,expense,logistics,5000,Courier charges
+2025-03-30,expense,misc,4000,Team lunch + office maintenance

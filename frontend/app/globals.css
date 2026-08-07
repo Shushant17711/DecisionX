@@ -1,0 +1,508 @@
+@import "tailwindcss";
+
+/* DaisyUI supplies the component base per AGENTS.md §8. Its dark theme is the
+   ground only — every surface, line and accent below is DecisionX's own, so the
+   plugin never decides what the product looks like. */
+@plugin "daisyui" {
+  themes: dark --default;
+  root: "[data-theme='decisionx']";
+}
+
+/* ============================================================
+   DecisionX — Neo Kinpaku
+   Black urushi lacquer, kinpaku gold leaf, verdigris patina and
+   shu vermilion. Restraint in chrome, brilliance in texture.
+   ============================================================ */
+
+:root {
+  /* Surfaces — never pure black; the ground is warm-tinted lacquer */
+  --lacquer-deep: oklch(4% 0.004 95);
+  --background: oklch(7% 0.006 95);
+  --surface: oklch(9.5% 0.006 95);
+  --surface-elevated: oklch(12% 0.007 95);
+  --surface-hover: oklch(15% 0.008 95);
+
+  /* Brand */
+  --accent: oklch(84% 0.19 80.46); /* kinpaku gold */
+  --accent-dim: oklch(84% 0.19 80.46 / 0.14);
+  --accent-line: oklch(84% 0.19 80.46 / 0.28);
+  --patina: oklch(70% 0.12 188); /* verdigris */
+  --patina-dim: oklch(70% 0.12 188 / 0.14);
+  --vermilion: oklch(62% 0.17 27); /* shu — the traditional counterpart to gold on urushi */
+  --vermilion-dim: oklch(62% 0.17 27 / 0.14);
+  --ink: oklch(14% 0.018 95); /* foreground on gold */
+
+  /* Text — every step verified above 4.5:1 on --background.
+     Dimming with opacity instead lands around 3:1 and fails. */
+  --foreground: oklch(91% 0 0);
+  --text-secondary: oklch(74% 0.008 95);
+  --text-muted: oklch(61% 0.008 95);
+
+  /* Semantic verdicts */
+  --success: var(--patina);
+  --warning: var(--accent);
+  --danger: var(--vermilion);
+
+  /* Lines — hairlines only. A colored rule above 1px reads as a costume. */
+  --border-subtle: oklch(100% 0 0 / 0.09);
+  --border-strong: oklch(100% 0 0 / 0.16);
+
+  /* Shadows carry an offset and a soft blur, tinted to the ground's hue */
+  --shadow-raised: 0 1px 2px oklch(0% 0 0 / 0.4), 0 8px 24px -8px oklch(0% 0 0 / 0.55);
+  --shadow-lifted: 0 2px 4px oklch(0% 0 0 / 0.45), 0 18px 48px -12px oklch(0% 0 0 / 0.65);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  --measure: 68ch;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent: var(--accent);
+  --color-patina: var(--patina);
+  --color-vermilion: var(--vermilion);
+  --color-muted: var(--text-muted);
+  --color-secondary-text: var(--text-secondary);
+  --font-sans: var(--font-albert), "Albert Sans", system-ui, sans-serif;
+  --font-mono: var(--font-ibm-mono), "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  /* ── Base ─────────────────────────────────────────────────── */
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    /* Also on the root, so overscroll and the area beyond the body paint the
+       page's own ground instead of the browser's dark canvas. */
+    background: var(--background);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv05" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Lacquer grain. Real urushi is never optically flat, and a dead-flat dark
+     ground is the single clearest tell of an unfinished dark theme. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+
+  /* ── Browser surfaces ─────────────────────────────────────────
+     The parts we did not draw still carry the design. Left at their
+     defaults they belong to no design system at all. */
+
+  ::selection {
+    background: oklch(84% 0.19 80.46 / 0.28);
+    color: var(--foreground);
+  }
+
+  input,
+  textarea {
+    caret-color: var(--accent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--lacquer-deep);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(30% 0.01 95);
+    border: 3px solid var(--lacquer-deep);
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(42% 0.02 90);
+  }
+  * {
+    scrollbar-color: oklch(30% 0.01 95) var(--lacquer-deep);
+    scrollbar-width: thin;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  ::marker {
+    color: var(--accent-line);
+  }
+
+  a {
+    color: inherit;
+    text-underline-offset: 0.25em;
+    text-decoration-thickness: 1px;
+  }
+
+  /* Data must not shift as it changes. Every numeral in the product is tabular. */
+  .tnum,
+  time,
+  .font-mono,
+  [class*="font-mono"] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* ── Typography ───────────────────────────────────────────── */
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: clamp(2.75rem, 7vw, 5rem);
+    letter-spacing: -0.04em;
+    font-weight: 300;
+  }
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    letter-spacing: -0.025em;
+  }
+  h3 {
+    font-size: 1.125rem;
+    letter-spacing: -0.015em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  .measure {
+    max-width: var(--measure);
+  }
+
+  /* The wordmark: widely tracked, geometric, quiet. */
+  .wordmark {
+    font-weight: 500;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    font-size: 0.8125rem;
+  }
+
+  .label {
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+}
+
+@layer components {
+  /* ── Panels ───────────────────────────────────────────────── */
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    position: relative;
+  }
+
+  .panel-raised {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    box-shadow: var(--shadow-raised);
+  }
+
+  /* Kinpaku seam: the hairline of gold leaf along a panel's top edge. Carries
+     brand weight without a border thick enough to read as a stripe. */
+  .seam::after {
+    content: "";
+    position: absolute;
+    inset: -1px -1px auto -1px;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--seam-color, var(--accent-line)) 18%,
+      var(--seam-color, var(--accent-line)) 82%,
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .panel-interactive {
+      transition:
+        border-color 0.18s var(--ease-out),
+        background-color 0.18s var(--ease-out),
+        transform 0.18s var(--ease-out);
+    }
+    .panel-interactive:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-elevated);
+    }
+  }
+
+  /* ── Controls ─────────────────────────────────────────────── */
+
+  .field {
+    width: 100%;
+    background: var(--lacquer-deep);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    color: var(--foreground);
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    transition:
+      border-color 0.16s var(--ease-out),
+      background-color 0.16s var(--ease-out);
+  }
+  .field::placeholder {
+    color: var(--text-muted);
+  }
+  .field:hover {
+    border-color: var(--border-strong);
+  }
+  .field:focus {
+    border-color: var(--accent-line);
+    background: oklch(6% 0.006 95);
+    outline: none;
+  }
+  .field:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--ink);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition:
+      transform 0.12s var(--ease-out),
+      filter 0.16s var(--ease-out),
+      box-shadow 0.16s var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover:not(:disabled) {
+      filter: brightness(1.08);
+      box-shadow: 0 4px 18px -4px oklch(84% 0.19 80.46 / 0.4);
+    }
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.985);
+    transition-duration: 0.08s;
+  }
+  .btn-primary:disabled {
+    background: var(--surface-elevated);
+    border-color: var(--border-subtle);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+
+  .btn-quiet {
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    color: var(--text-secondary);
+    background: transparent;
+    transition:
+      border-color 0.16s var(--ease-out),
+      color 0.16s var(--ease-out),
+      background-color 0.16s var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-quiet:hover:not(:disabled) {
+      border-color: var(--border-strong);
+      color: var(--foreground);
+      background: var(--surface);
+    }
+  }
+  .btn-quiet:active:not(:disabled) {
+    transform: scale(0.985);
+    transition-duration: 0.08s;
+  }
+
+  /* Range input. Native styling belongs to the OS, not to this world. */
+  .panel-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 16px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .panel-range::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(
+      90deg,
+      var(--accent) 0 var(--fill),
+      var(--border-subtle) var(--fill) 100%
+    );
+  }
+  .panel-range::-moz-range-track {
+    height: 2px;
+    border-radius: 1px;
+    background: var(--border-subtle);
+  }
+  .panel-range::-moz-range-progress {
+    height: 2px;
+    border-radius: 1px;
+    background: var(--accent);
+  }
+  .panel-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--background);
+    box-shadow: 0 1px 4px oklch(0% 0 0 / 0.6);
+    transition: transform 0.14s var(--ease-out);
+  }
+  .panel-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--background);
+    box-shadow: 0 1px 4px oklch(0% 0 0 / 0.6);
+    transition: transform 0.14s var(--ease-out);
+  }
+  .panel-range:active::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+  .panel-range:active::-moz-range-thumb {
+    transform: scale(1.15);
+  }
+
+  /* ── Verdict chips ────────────────────────────────────────── */
+
+  .verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 2px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid;
+  }
+  .verdict-go {
+    background: var(--patina-dim);
+    color: var(--patina);
+    border-color: oklch(70% 0.12 188 / 0.35);
+  }
+  .verdict-caution {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: var(--accent-line);
+  }
+  .verdict-nogo {
+    background: var(--vermilion-dim);
+    color: oklch(72% 0.15 27);
+    border-color: oklch(62% 0.17 27 / 0.38);
+  }
+  /* Horizontal scroller with an edge fade, so a diagram wider than the
+     viewport advertises that there is more of it to the right. */
+  .scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 3rem), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 3rem), transparent 100%);
+  }
+
+  /* Once everything fits, the fade would be lying about hidden content. */
+  @media (min-width: 52rem) {
+    .scroll-x {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
+
+  /* ── Motion ───────────────────────────────────────────────── */
+
+  /* The one authored moment: a card settling into place as its verdict lands.
+     Starts from an already-visible default rather than from nothing. */
+  @keyframes settle {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .settle {
+    animation: settle 0.42s var(--ease-out) both;
+  }
+
+  /* Waiting agents: the gold seam traverses the card edge. */
+  @keyframes seam-travel {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .awaiting::after {
+    content: "";
+    position: absolute;
+    inset: -1px -1px auto -1px;
+    height: 1px;
+    overflow: hidden;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: seam-travel 1.6s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
