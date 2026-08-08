@@ -262,7 +262,6 @@ function ResultsView() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const notFound = state.status === "missing";
 
-  // loadFromHistory handles ?id= from URL idempotently.
   useEffect(() => {
     if (historyId) loadFromHistory(historyId);
   }, [historyId]);
@@ -313,7 +312,6 @@ function ResultsView() {
       ),
     [state.personas, matchesRole, status],
   );
-  // A seat with no verdict yet has no status, so a status filter excludes it.
   const shownPending = useMemo(
     () => (status === "all" ? pending.filter(matchesRole) : []),
     [pending, matchesRole, status],
@@ -322,10 +320,8 @@ function ResultsView() {
   const filtered = role !== "all" || status !== "all";
   const shownCount = shownPersonas.length + shownPending.length;
 
-  // The stored record is what an export reads; it exists once the run has saved.
   const entry = state.historyId ? getEntry(state.historyId) : undefined;
 
-  // Real panel data first, then whatever the synthesizer chose to draw.
   const boardCharts = useMemo(
     () => [synthesis?.score_chart, ...(synthesis?.charts ?? [])].filter(Boolean) as Chart[],
     [synthesis],

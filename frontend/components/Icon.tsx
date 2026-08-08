@@ -1,11 +1,7 @@
-// Consistent 24x24 icon set using currentColor. Prevents OS emoji inconsistency.
-
 export type IconName =
-  // Persona vocabulary — mirrors ICON_NAMES in backend/agents/personas.py
   | "target" | "wrench" | "user" | "wallet" | "compass" | "scales" | "palette"
   | "beaker" | "globe" | "megaphone" | "layers" | "flame" | "shield" | "pulse"
   | "network" | "seedling" | "terminal" | "gauge" | "route" | "spark"
-  // Interface vocabulary
   | "panel" | "close" | "plus" | "search" | "trash" | "upload" | "file"
   | "arrowRight" | "arrowLeft" | "check" | "cross" | "chevronDown" | "clock"
   | "copy" | "alert" | "split" | "grid" | "list" | "refresh" | "download";

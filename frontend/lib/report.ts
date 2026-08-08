@@ -189,17 +189,11 @@ function csvCell(value: string): string {
 }
 
 export function buildReportCsv(entry: HistoryEntry, note: string): string {
-  const lines = [CSV_HEADER.join(",")];
-  for (const row of buildReportRows(entry, note)) {
-    lines.push(
-      [row.section, row.role, row.item, row.detail, row.score, row.status].map(csvCell).join(","),
-    );
-  }
-  // A BOM so spreadsheet apps read the em dashes and rupee signs as UTF-8.
-  return `﻿${lines.join("\r\n")}\r\n`;
+  const rows = buildReportRows(entry, note).map((row) =>
+    [row.section, row.role, row.item, row.detail, row.score, row.status].map(csvCell).join(","),
+  );
+  return "\uFEFF" + [CSV_HEADER.join(",")].concat(rows).join("\r\n") + "\r\n";
 }
-
-/* ─── Standalone HTML ─── */
 
 function escapeHtml(value: string): string {
   return value
@@ -257,10 +251,6 @@ function expertBlock(persona: PersonaResult): string {
   </article>`;
 }
 
-/**
- * A self-contained document: no external stylesheet, font or script, so the file
- * renders identically offline and prints to PDF straight from the browser.
- */
 export function buildReportHtml(entry: HistoryEntry, note: string): string {
   const result = entry.result;
   const synthesis = result.synthesis;
@@ -459,14 +449,11 @@ export function buildReportHtml(entry: HistoryEntry, note: string): string {
 `;
 }
 
-/* ─── Delivery ─── */
-
 const MIME: Record<"csv" | "html", string> = {
   csv: "text/csv;charset=utf-8",
   html: "text/html;charset=utf-8",
 };
 
-/** Hand a generated string to the browser as a download. */
 export function downloadFile(filename: string, kind: "csv" | "html", contents: string) {
   const url = URL.createObjectURL(new Blob([contents], { type: MIME[kind] }));
   const link = document.createElement("a");
@@ -475,6 +462,5 @@ export function downloadFile(filename: string, kind: "csv" | "html", contents: s
   document.body.appendChild(link);
   link.click();
   link.remove();
-  // Revoking immediately can race the download in Safari.
-  window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }

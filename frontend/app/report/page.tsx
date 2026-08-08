@@ -146,7 +146,6 @@ function ReportView() {
   const noteLoadedFor = useRef<string | null>(null);
   const printed = useRef(false);
 
-  // Notes live in localStorage, so they can only be read after hydration.
   useEffect(() => {
     if (!id || noteLoadedFor.current === id) return;
     noteLoadedFor.current = id;
@@ -159,8 +158,6 @@ function ReportView() {
     return () => window.clearTimeout(handle);
   }, [id, note]);
 
-  // Arriving with ?print=1 means the reader chose PDF elsewhere: print once the
-  // document has actually rendered, never twice.
   useEffect(() => {
     if (!wantsPrint || !entry || printed.current) return;
     printed.current = true;
@@ -214,9 +211,6 @@ function ReportView() {
   const status = synthesis ? synthesisStatus(synthesis) : verdictStatus(entry.verdict);
   const ink = STATUS_INK[status];
   const included = (result.attachments ?? []).filter((a) => a.included);
-
-  // The panel is presented by role, which is how the report is read: a reviewer
-  // looks for their own seat before reading anyone else's.
   const byRole = new Map<RoleId, PersonaResult[]>();
   for (const persona of personas) {
     const role = personaRole(persona);
@@ -243,7 +237,7 @@ function ReportView() {
     >
       <header>
         <p className="doc-label">DecisionX — panel report</p>
-        <h1 className="mt-2.5 text-[clamp(1.5rem,3vw,2.125rem)] font-normal leading-[1.15] tracking-[-0.02em] text-[var(--doc-ink)]">
+        <h1 className="mt-2.5 text-base font-medium leading-relaxed text-[var(--doc-ink)]">
           {entry.idea}
         </h1>
         <p className="tnum mt-3 text-[0.8125rem] text-[var(--doc-muted)]">

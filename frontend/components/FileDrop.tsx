@@ -28,7 +28,6 @@ function rejectionReason(file: File): string | null {
   return null;
 }
 
-// Attach documents. Text is appended to context for experts.
 export function FileDrop({
   files,
   onChange,
@@ -54,7 +53,6 @@ export function FileDrop({
           problems.push(reason);
           continue;
         }
-        // Re-drops (same name and size) are ignored.
         const duplicate =
           files.some((f) => f.name === file.name && f.size === file.size) ||
           accepted.some((f) => f.name === file.name && f.size === file.size);
@@ -113,7 +111,7 @@ export function FileDrop({
           aria-describedby={describedBy}
           onChange={(e) => {
             add(e.target.files);
-            e.target.value = ""; // Allow re-selecting a file the user just removed
+            e.target.value = "";
           }}
         />
 

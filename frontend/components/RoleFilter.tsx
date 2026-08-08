@@ -104,7 +104,7 @@ export function StatusChips({
   onChange: (next: StatusId | "all") => void;
 }) {
   const present = STATUS_FILTERS.filter((status) => (counts.get(status.id) ?? 0) > 0);
-  if (present.length < 2) return null; // Nothing to separate.
+  if (present.length < 2) return null;
 
   return (
     <div role="group" aria-label="Filter by verdict" className="flex flex-wrap items-center gap-1.5">

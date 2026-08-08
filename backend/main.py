@@ -128,7 +128,6 @@ async def evaluate_stream(
     panel_size = max(1, min(MAX_PANEL_SIZE, num_personas))
 
     async def event_stream():
-        # Client disconnect only cancels agents; request body is already drained.
         try:
             if manifest:
                 yield json.dumps({"type": "attachments", "attachments": manifest}) + "\n"
@@ -149,7 +148,7 @@ async def evaluate_stream(
         media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-cache, no-transform",
-            "X-Accel-Buffering": "no",  # stops nginx-style proxies buffering the stream
+            "X-Accel-Buffering": "no",  
         },
     )
 

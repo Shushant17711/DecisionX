@@ -30,10 +30,8 @@ from openai import (
     RateLimitError,
 )
 
-# Retry transient failures; permanent failures return immediately.
 TRANSIENT_ERRORS = (APITimeoutError, RateLimitError, APIConnectionError, InternalServerError)
 
-# Max attempts per call mitigates burst timeouts on large panels.
 MAX_ATTEMPTS = 2
 
 
@@ -50,7 +48,7 @@ def load_keys(filename: str) -> list[str]:
                 if key and not key.startswith("#"):
                     keys.append(key)
     except FileNotFoundError:
-        pass  # Optional provider
+        pass  
     except Exception as e:
         print(f"Warning: Could not load keys from {filename}: {e}")
     return keys
@@ -81,13 +79,10 @@ PROVIDERS = {
     },
 }
 
-# Round-robin key cursors spread concurrent agents evenly across keys.
 _KEY_CURSORS = {name: itertools.cycle(cfg["keys"] or [None]) for name, cfg in PROVIDERS.items()}
 
-# (provider, key) -> AsyncOpenAI. Reused so the connection pool survives.
 _CLIENTS: dict[tuple[str, str], AsyncOpenAI] = {}
 
-# (provider, model) -> bool. False once a model has rejected response_format.
 _JSON_MODE_SUPPORT: dict[tuple[str, str], bool] = {}
 
 _JSON_MODE_REJECTIONS = (
@@ -205,15 +200,12 @@ async def async_call_llm(
     ]
     started = time.perf_counter()
 
-    # Split timeout across attempts to fit within caller deadline.
     attempt_timeout = timeout / MAX_ATTEMPTS if len(config["keys"]) > 1 else timeout
     last_error = "unknown error"
 
     for attempt in range(MAX_ATTEMPTS):
-        # Use a fresh key per attempt to bypass rate limits.
         client = _get_client(provider, _next_key(provider), attempt_timeout)
 
-        # Only offer JSON mode if this model has not already rejected it.
         json_modes = [True, False] if _JSON_MODE_SUPPORT.get((provider, use_model), True) else [False]
 
         for use_json_mode in json_modes:
@@ -235,7 +227,7 @@ async def async_call_llm(
 
             except json.JSONDecodeError:
                 if use_json_mode:
-                    continue  # Some models format better freeform than in JSON mode
+                    continue  
                 return _fallback_response(
                     f"[{provider}] Analysis completed but output format was unexpected."
                 )
@@ -250,7 +242,7 @@ async def async_call_llm(
                     f"({type(e).__name__}) at {time.perf_counter() - started:.1f}s — "
                     f"{'retrying on another key' if attempt + 1 < MAX_ATTEMPTS else 'giving up'}"
                 )
-                break  # Leave the json-mode loop; the outer loop retries on a new key
+                break  
 
             except Exception as e:
                 err_msg = str(e).lower()
@@ -258,7 +250,6 @@ async def async_call_llm(
                     _JSON_MODE_SUPPORT[(provider, use_model)] = False
                     print(f"[LLM] {provider}/{use_model} rejects response_format — disabling it")
                     continue
-                # Permanent: bad key, unknown model, malformed request.
                 print(
                     f"[LLM] {provider}/{use_model} failed after "
                     f"{time.perf_counter() - started:.1f}s: {str(e)[:160]}"

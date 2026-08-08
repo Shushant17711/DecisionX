@@ -32,7 +32,7 @@ def _stub_llm(architect_count: int = 40):
     """Replace async_call_llm everywhere with a deterministic in-memory double."""
 
     async def fake_call(system_prompt, user_prompt, provider="groq", model=None, **kwargs):
-        await asyncio.sleep(0)  # keep it a real coroutine scheduling point
+        await asyncio.sleep(0) 
         if "Panel Architect" in system_prompt:
             return {
                 "personas": [
@@ -74,8 +74,7 @@ def _stub_llm(architect_count: int = 40):
                 "note": "Assumes 200 subscribers.",
                 "data": [
                     {"label": "Kitchen", "value": 40000},
-                    {"label": "Delivery", "value": 25000},
-                    {"label": "Packaging", "value": 8000},
+                    {"label": "Delivery", "value": "₹25,000"},
                 ],
             },
         }
@@ -110,10 +109,8 @@ async def test_stream_contract():
     assert result["synthesis"]["overall_score"] == 7
     assert result["synthesis"]["consensus_percentage"] == 100
     assert isinstance(result["elapsed_seconds"], float)
-    # Every event must survive the JSON round trip the endpoint performs
     for e in events:
         json.loads(json.dumps(e))
-    print("  stream contract ..... ok")
 
 
 async def test_large_panel_uses_custom_personas():
@@ -124,21 +121,18 @@ async def test_large_panel_uses_custom_personas():
     assert keys[-1] == "critic"
     custom = [p for p in panel if p.get("custom")]
     assert len(custom) == 30 - len(personas.PERSONAS), len(custom)
-    print(f"  panel of 30 ......... ok ({len(custom)} bespoke experts)")
 
 
 async def test_panel_size_is_clamped():
     for requested, expected in ((0, 1), (1, 1), (5, 5), (999, personas.MAX_PANEL_SIZE)):
         _, panel = await orchestrator.assemble_panel("A carbon credit marketplace", "", requested)
         assert len(panel) == expected, f"{requested} -> {len(panel)}, wanted {expected}"
-    print("  panel clamping ...... ok")
 
 
 async def test_unclassified_idea_gets_bespoke_experts():
     assert personas.classify_idea_domain("a poem about rain") == [], "'ai' must not match 'rain'"
     _, panel = await orchestrator.assemble_panel("A ritual for remembering names", "", 5)
     assert any(p.get("custom") for p in panel), "unclassified idea should get bespoke experts"
-    print("  bespoke fallback .... ok")
 
 
 async def test_failed_agents_excluded_from_score():
@@ -149,7 +143,6 @@ async def test_failed_agents_excluded_from_score():
     out = await synthesizer.synthesize_verdict(results, "idea")
     assert out["agent_scores"] == {"A": 9}, out["agent_scores"]
     assert out["failed_agents"] == ["B"], out["failed_agents"]
-    print("  failed-agent scores . ok")
 
 
 async def test_multi_file_extraction():
@@ -166,7 +159,6 @@ async def test_multi_file_extraction():
     assert manifest[0]["included"] and manifest[1]["included"]
     assert not manifest[2]["included"] and "Unsupported" in manifest[2]["error"]
     assert not manifest[3]["included"] and manifest[3]["error"] == "File is empty"
-    print("  multi-file parsing .. ok")
 
 
 async def test_json_extraction_edge_cases():
@@ -175,7 +167,6 @@ async def test_json_extraction_edge_cases():
     assert extract('Here you go: {"a": 2} — hope that helps') == {"a": 2}
     assert extract('{"note": "a } brace in a string", "a": 3}')["a"] == 3
     assert extract('{"nested": {"deep": true}, "a": 4}')["a"] == 4
-    print("  json extraction ..... ok")
 
 
 async def test_chart_sanitizer():
@@ -191,25 +182,23 @@ async def test_chart_sanitizer():
     assert good and good["title"] == "Monthly cost breakdown", good
     assert good["data"][1]["value"] == 25000.0, "numeric strings must coerce"
 
-    # Malformed charts must be rejected
     assert sanitize_chart(None) is None
     assert sanitize_chart({"type": "pie", "title": "x", "data": [{"label": "a", "value": 1}]}) is None
     assert sanitize_chart({"type": "bar", "title": "", "data": [{"label": "a", "value": 1}]}) is None
-    assert sanitize_chart({"type": "bar", "title": "t", "data": [{"label": "a", "value": 1}]}) is None, "one point"
+    assert sanitize_chart({"type": "bar", "title": "t", "data": [{"label": "a", "value": 1}]}) is None
     assert sanitize_chart({
         "type": "bar", "title": "t",
         "data": [{"label": "a", "value": 5}, {"label": "b", "value": 5}],
-    }) is None, "flat series carries no information"
+    }) is None
     assert sanitize_chart({
         "type": "split", "title": "t",
         "data": [{"label": "a", "value": -1}, {"label": "b", "value": 5}],
-    }) is None, "part-to-whole cannot be negative"
+    }) is None
     assert sanitize_chart({
         "type": "bar", "title": "t",
         "data": [{"label": "a", "value": "n/a"}, {"label": "b", "value": 2}],
-    }) is None, "unparseable value leaves too few points"
+    }) is None
 
-    # Duplicate categories collapse, and the point cap holds
     dup = sanitize_chart({
         "type": "bar", "title": "t",
         "data": [{"label": "A", "value": 1}, {"label": "a", "value": 9}, {"label": "B", "value": 2}],
@@ -222,22 +211,19 @@ async def test_chart_sanitizer():
     })
     assert len(many["data"]) == 8, len(many["data"])
 
-    # Mixed-scale bars are the dual-axis mistake hidden in one series
     assert sanitize_chart({
         "type": "bar", "title": "Cost breakdown", "unit": "INR",
         "data": [{"label": "CAC", "value": 40000}, {"label": "Conversion rate", "value": 0.5},
                  {"label": "Fee", "value": 12000}],
-    }) is None, "a bar mixing rupees and a rate must be rejected"
-    # The same spread over time is a legitimate trend, not a unit error
+    }) is None
     assert sanitize_chart({
         "type": "line", "title": "Subscribers", "unit": "",
         "data": [{"label": "M1", "value": 3}, {"label": "M6", "value": 900},
                  {"label": "M12", "value": 12000}],
-    }) is not None, "line charts legitimately span orders of magnitude"
+    }) is not None
 
     assert sanitize_charts("not a list") == []
     assert len(sanitize_charts([good, good, good], limit=2)) == 2
-    print("  chart sanitizer ..... ok")
 
 
 async def test_persona_chart_survives_pipeline():
@@ -246,15 +232,12 @@ async def test_persona_chart_survives_pipeline():
         events.append(e)
     result = events[-1]["result"]
 
-    # Identical stub charts must dedupe so only one survives.
     with_charts = [p for p in result["personas"] if "chart" in p["analysis"]]
     assert len(with_charts) == 1, f"identical charts must dedupe, kept {len(with_charts)}"
     assert with_charts[0]["analysis"]["chart"]["type"] == "bar"
-    # Score chart uses real scores, not estimated.
     sc = result["synthesis"]["score_chart"]
     assert sc["measured"] is True and len(sc["data"]) == 3, sc
-    json.loads(json.dumps(result))  # must survive the endpoint's serialization
-    print("  chart in pipeline ... ok")
+    json.loads(json.dumps(result))
 
 
 async def test_malformed_chart_is_dropped():
@@ -278,7 +261,6 @@ async def test_malformed_chart_is_dropped():
 
     assert all("chart" not in p["analysis"] for p in result["personas"]), "malformed chart must be dropped"
     assert result["synthesis"]["charts"] == [], result["synthesis"]["charts"]
-    print("  malformed dropped ... ok")
 
 
 async def main():

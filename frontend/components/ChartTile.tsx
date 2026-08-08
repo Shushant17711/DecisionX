@@ -1,13 +1,10 @@
 "use client";
 
-// Chart tile rendered as inline SVG for design consistency. Numbers are estimates unless marked 'measured'.
-
 import { useId, useState } from "react";
 
 import { Icon } from "./Icon";
 import type { Chart, ChartPoint } from "@/lib/types";
 
-/* Validated palette for part-to-whole charts; do not add hues. */
 const SPLIT_COLORS = ["#bf8600", "#00a299", "#d04f47", "#7973ca", "#b3622a"];
 
 const SERIES = "var(--accent)";
@@ -25,8 +22,6 @@ function formatValue(value: number, unit: string): string {
   if (unit === "%" || unit.startsWith("/")) return `${text}${unit}`;
   return `${text} ${unit}`;
 }
-
-/* ── Bar: compare magnitude across categories ── */
 
 function BarChart({ data, unit }: { data: ChartPoint[]; unit: string }) {
   const [hover, setHover] = useState<number | null>(null);
@@ -73,8 +68,6 @@ function BarChart({ data, unit }: { data: ChartPoint[]; unit: string }) {
   );
 }
 
-/* ── Line: a trend across an ordered axis ── */
-
 function LineChart({ data, unit }: { data: ChartPoint[]; unit: string }) {
   const [hover, setHover] = useState<number | null>(null);
   const gradientId = useId();
@@ -88,7 +81,6 @@ function LineChart({ data, unit }: { data: ChartPoint[]; unit: string }) {
   const values = data.map((d) => d.value);
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
-  // Anchor to zero unless series is far from it.
   const min = rawMin >= 0 && rawMin <= rawMax * 0.4 ? 0 : rawMin;
   const max = rawMax;
   const span = max - min || 1;
@@ -98,7 +90,6 @@ function LineChart({ data, unit }: { data: ChartPoint[]; unit: string }) {
 
   const linePath = data.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(d.value).toFixed(1)}`).join(" ");
   const areaPath = `${linePath} L${x(data.length - 1).toFixed(1)} ${(PAD.top + plotH).toFixed(1)} L${x(0).toFixed(1)} ${(PAD.top + plotH).toFixed(1)} Z`;
-  // Draw zero rule if series crosses zero.
   const crossesZero = min < 0 && max > 0;
   const ticks = crossesZero ? [min, 0, max] : [min, min + span / 2, max];
 

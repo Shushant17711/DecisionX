@@ -31,12 +31,10 @@ from agents.synthesizer import synthesize_verdict
 
 from agents.llm_client import async_call_llm
 
-# Cap concurrent calls to avoid tripping provider rate limits.
 MAX_CONCURRENT_AGENTS = 12
 
 PERSONA_TIMEOUT = 25.0
 
-# Cap total charts per panel to prevent a wall of redundant graphs.
 MAX_PERSONA_CHARTS = 4
 
 
@@ -60,12 +58,11 @@ async def run_single_persona(persona: dict, idea: str, context: str, sem: asynci
             user_prompt=user_prompt,
             provider="groq",
             model="llama-3.1-8b-instant",
-            max_tokens=950,  # headroom for an optional chart
+            max_tokens=950,  
             temperature=0.7,
             timeout=PERSONA_TIMEOUT,
         )
 
-    # Optional chart survives only if it passes validation.
     chart = sanitize_chart(analysis.get("chart")) if isinstance(analysis, dict) else None
     if isinstance(analysis, dict):
         if chart:
@@ -97,7 +94,6 @@ async def assemble_panel(idea: str, context: str, max_agents: int) -> tuple[list
     domains = classify_idea_domain(idea)
 
     builtin_keys = select_personas(domains, max_agents=max_agents)
-    # select_personas always returns the Critic last; it closes every panel.
     core = [{"key": k, **PERSONAS[k]} for k in builtin_keys[:-1]]
     critic = {"key": "critic", **PERSONAS["critic"]}
 
@@ -107,7 +103,6 @@ async def assemble_panel(idea: str, context: str, max_agents: int) -> tuple[list
     if shortfall > 0:
         wanted = shortfall
     elif unclassified and max_agents >= 3:
-        # If idea matches no known domain, design bespoke experts to replace generalists.
         wanted = min(2, len(core))
     else:
         wanted = 0
@@ -152,7 +147,6 @@ async def evaluate_idea_stream(
     tasks = [asyncio.create_task(run_single_persona(p, idea, context, sem)) for p in panel]
 
     persona_results: list[dict] = []
-    # Filter duplicate charts as they stream; first finisher keeps it.
     seen_charts: set[tuple] = set()
     charts_kept = 0
 
@@ -174,7 +168,6 @@ async def evaluate_idea_stream(
             t.cancel()
         raise
 
-    # Preserve panel order in the final payload — as_completed returns by finish time
     order = {p["key"]: i for i, p in enumerate(panel)}
     persona_results.sort(key=lambda r: order.get(r["key"], 999))
 

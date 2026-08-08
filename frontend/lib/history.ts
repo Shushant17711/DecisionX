@@ -1,5 +1,3 @@
-// LocalStorage-backed evaluation history; auto-evicts on quota limit.
-
 import type { BriefSnapshot } from "./brief";
 import type { EvalResult } from "./types";
 
@@ -16,13 +14,11 @@ export interface HistoryEntry {
   domains: string[];
   attachmentCount: number;
   result: EvalResult;
-  /** The inputs the panel was given. Absent on entries saved before the brief existed. */
   brief?: BriefSnapshot;
 }
 
 const listeners = new Set<() => void>();
 
-// Cache parsed list by reference to prevent React render loops.
 const EMPTY: HistoryEntry[] = [];
 let cache: HistoryEntry[] | null = null;
 
@@ -51,7 +47,6 @@ function write(entries: HistoryEntry[]) {
       window.localStorage.setItem(KEY, JSON.stringify(candidate));
       break;
     } catch {
-      // Quota exceeded — sacrifice the oldest quarter and try again.
       candidate = candidate.slice(0, Math.max(1, Math.floor(candidate.length * 0.75)));
       if (candidate.length === 1) {
         try {
@@ -71,7 +66,6 @@ export function getHistory(): HistoryEntry[] {
   return read();
 }
 
-/** Server snapshot for useSyncExternalStore — history is client-only. */
 export function getHistoryServerSnapshot(): HistoryEntry[] {
   return EMPTY;
 }
@@ -97,10 +91,6 @@ export function saveEvaluation(result: EvalResult, brief?: BriefSnapshot): Histo
   return entry;
 }
 
-/**
- * Add entries that already carry their own ids — used to seed the worked sample
- * records. Existing ids are left untouched so seeding twice is a no-op.
- */
 export function importEntries(incoming: HistoryEntry[]): number {
   const existing = read();
   const known = new Set(existing.map((e) => e.id));
@@ -118,10 +108,8 @@ export function clearHistory() {
   write([]);
 }
 
-/** Subscribe to history changes. Returns an unsubscribe function. */
 export function subscribeHistory(listener: () => void): () => void {
   listeners.add(listener);
-  // Another tab writing to the same key invalidates our cached snapshot.
   const onStorage = (e: StorageEvent) => {
     if (e.key !== KEY) return;
     cache = null;

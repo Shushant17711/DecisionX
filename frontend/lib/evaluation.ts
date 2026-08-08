@@ -1,5 +1,3 @@
-// Module-level singleton store for live evaluation state.
-
 import type { BriefSnapshot } from "./brief";
 import { getEntry, saveEvaluation } from "./history";
 import type { Attachment, EvalResult, Expert, PersonaResult, StreamEvent } from "./types";
@@ -79,8 +77,7 @@ export interface EvaluationRequest {
   brief?: BriefSnapshot;
 }
 
-// Kick off a streamed evaluation.
-export function startEvaluation({ idea, context, panelSize, files, brief }: EvaluationRequest) {
+export async function startEvaluation({ idea, context, panelSize, files, brief }: EvaluationRequest) {
   controller?.abort();
   controller = new AbortController();
   const signal = controller.signal;
@@ -119,7 +116,6 @@ async function run(form: FormData, signal: AbortSignal) {
         const body = await res.json();
         if (body?.detail) detail = String(body.detail);
       } catch {
-        /* non-JSON error body — keep the status message */
       }
       throw new Error(detail);
     }
@@ -128,12 +124,11 @@ async function run(form: FormData, signal: AbortSignal) {
       applyEvent(event);
     }
 
-    // The stream closed without a `done` event — the server died mid-run.
     if (state.status === "running") {
       set({ status: "error", error: "The evaluation stream ended unexpectedly. Please try again." });
     }
   } catch (e) {
-    if (signal.aborted) return; // A new run or an explicit reset superseded this one.
+    if (signal.aborted) return;
     const message =
       e instanceof TypeError
         ? `Cannot reach the DecisionX API at ${API_BASE}. Is the backend running?`
@@ -175,7 +170,6 @@ function applyEvent(event: StreamEvent) {
   }
 }
 
-/** Decode a newline-delimited JSON body into events as they arrive. */
 async function* readNdjson(
   body: ReadableStream<Uint8Array>,
   signal: AbortSignal,
@@ -191,7 +185,7 @@ async function* readNdjson(
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      buffer = lines.pop() ?? ""; // Trailing fragment: wait for the rest.
+      buffer = lines.pop() ?? "";
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -206,11 +200,10 @@ async function* readNdjson(
   }
 }
 
-// Load stored evaluation into the store.
-export function loadFromHistory(historyId: string) {
-  if (state.historyId === historyId && state.status === "done") return;
+export function loadFromHistory(id: string) {
+  if (state.historyId === id && state.status === "done") return;
 
-  const entry = getEntry(historyId);
+  const entry = getEntry(id);
   if (!entry) {
     controller?.abort();
     controller = null;

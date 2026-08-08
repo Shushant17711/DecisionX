@@ -17,7 +17,6 @@ import pandas as pd
 import pdfplumber
 from fastapi import UploadFile
 
-# Character budgets prevent unbounded uploads from blowing model context windows.
 PER_FILE_CHARS = 5000
 TOTAL_CONTEXT_CHARS = 24000
 MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -91,7 +90,6 @@ def _parse_one(filename: str, content: bytes) -> tuple[str, str | None]:
         if name.endswith(TEXT_SUFFIXES):
             return _decode(content)[:PER_FILE_CHARS], None
 
-        # Reject binaries rather than feeding mojibake to the panel.
         text = _decode(content)
         if text.count("�") > len(text) * 0.05:
             return "", "Unsupported file type — upload a PDF, CSV, spreadsheet, or text file"

@@ -1,9 +1,9 @@
 # DecisionX: Project Details
 
 ## 1. Project Overview
-**DecisionX** is a generalized, multi-agent idea evaluation platform. It allows users to input any business, technical, or creative idea (along with optional context or files) and have it rigorously evaluated by a dynamically assembled panel of AI expert personas. 
+**DecisionX** is a generalized, multi-agent idea evaluation platform. It allows users to input any business, technical, or creative idea (along with optional context, success criteria, constraints, or files) and have it rigorously evaluated by a dynamically assembled panel of AI expert personas. 
 
-The system goes beyond a single LLM response by using a specialized multi-agent architecture. It classifies the idea, selects the most relevant built-in experts, dynamically invents custom experts if needed, runs their evaluations in parallel for blazing speed, and then synthesizes their feedback into a unified boardroom-style verdict. It specifically highlights areas of consensus and disagreement.
+The system goes beyond a single LLM response by using a specialized multi-agent architecture. It classifies the idea, selects the most relevant built-in experts, dynamically invents custom bespoke experts if needed, runs their evaluations in parallel for blazing speed, and then synthesizes their feedback into a unified boardroom-style verdict. It specifically highlights areas of consensus and disagreement.
 
 ## 2. System Architecture & Tech Stack
 
@@ -15,14 +15,14 @@ The project is structured as a decoupled frontend/backend application, communica
 - **Animations & Interactivity**: Framer Motion v13 (focusing on tactile, physical micro-animations)
 - **Visualizations**: Recharts v3.10
 - **Markdown Parsing**: React Markdown v10.1
-- **Role**: Provides the user interface for submitting ideas, selecting the number of personas, and visualizing the multi-agent feedback in real-time, including expert score breakdowns, SWOT analysis, and action plans.
+- **Role**: Provides the user interface for submitting ideas, selecting the number of personas, and visualizing the multi-agent feedback in real-time, including expert score breakdowns, SWOT analysis, and action plans. Includes local history management and export capabilities (HTML, CSV).
 
 ### Backend
 - **Framework**: FastAPI (Python)
 - **Server**: Uvicorn (ASGI)
 - **LLM Integration**: 
-  - Supports multiple providers: **Groq**, **OpenRouter**, and **NVIDIA**, managed through a dynamic client (`llm_client.py`) that handles API key rotation and rate limits.
-  - Model fallbacks and retry mechanisms are built-in to ensure high availability.
+  - Supports multiple providers: **Groq**, **NVIDIA**, and **OpenRouter**, managed through a dynamic client (`llm_client.py`) that handles API key rotation, timeouts, and rate limits.
+  - Model fallbacks and retry mechanisms are built-in (Groq → NVIDIA → OpenRouter) to ensure high availability.
 - **Environment Management**: `python-dotenv` for managing API keys. Keys can be loaded from text files (`groqapi`, `nvidiaapi`, `openrouterapi`).
 - **File Parsing**: Uses `pdfplumber`, `pandas`, and `openpyxl` to extract context from uploaded files.
 
@@ -62,23 +62,25 @@ The selected personas evaluate the idea simultaneously. Thanks to `asyncio.gathe
 The `synthesizer.py` agent takes all the individual persona outputs and acts as the "Board Chairman". It produces a unified JSON verdict containing an overall score, executive summary, consensus points, disagreements, SWOT analysis, action plans, and data charts.
 The synthesizer uses a fallback chain (Groq -> NVIDIA -> OpenRouter). If all API calls fail, it gracefully degrades to a deterministic local synthesis function to ensure the user always gets a response.
 
-## 4. The Results Page UI
+## 4. The UI and Export Capabilities
 
-The results page (`frontend/app/results/page.tsx`) provides a rich, real-time visualization of the evaluation:
+The platform provides a rich, real-time visualization of the evaluation and powerful tools for saving and sharing:
 
-- **The Brief**: Displays the original idea in formatted Markdown along with attached context and parsed files.
-- **Real-Time Progress State**: Shows a live progress bar ("Awaiting") while the panel is being assembled, and reads "Reading the brief…" as each expert works. 
+- **The Brief Form**: Users can submit their idea alongside context, success criteria, and constraints. Files can be attached for additional grounding.
+- **Real-Time Progress State**: Displays an NDJSON streaming experience. Shows a live progress bar ("Awaiting") while the panel is being assembled, and updates as each expert finishes.
 - **Expert Cards**: Individual cards for each persona detailing their specific verdict, score out of 10, "In favour" points (strengths), "Against" points (concerns), and recommendations. Bespoke experts created by the Panel Architect are tagged.
 - **Synthesis View (The Boardroom Verdict)**: 
-  - **Overall Score & Verdict**: Shows Go, Caution, or No-Go using distinct styling (e.g., Patina for Go, Vermilion for No-Go).
+  - **Overall Score & Verdict**: Shows Go, Caution, or No-Go using distinct styling.
   - **Executive Summary & Consensus**: Highlights what the panel universally agreed upon.
   - **Where They Split**: A dedicated disagreements section showcasing conflicting views between experts and providing a reconciled resolution.
   - **By the Numbers**: Renders charts (via Recharts) representing quantitative data, such as score spread among experts.
   - **SWOT Quadrants**: Categorizes feedback into Strengths, Weaknesses, Opportunities, and Threats.
   - **Action Plans**: Breaks down actionable next steps into Immediate (7 days) and Follow-through (30 days) horizons.
   - **The Chair's Recommendation**: A final, actionable paragraph summarizing the boardroom's conclusion.
-- **Error Handling**: Gracefully handles and displays cases where all agents fail or API keys are missing/expired.
-- **Local History Sidebar**: Evaluations are saved locally in the browser. Users can access past evaluations using a sidebar toggle or the `Cmd/Ctrl + K` keyboard shortcut.
+- **History and Notes**: 
+  - **Local History Sidebar**: Evaluations are saved locally in the browser (`localStorage`). Users can access past evaluations using a sidebar toggle or the `Cmd/Ctrl + K` keyboard shortcut.
+  - **Reviewer Notes**: Users can add personal notes to any evaluation, which are also persisted locally.
+- **Report Generation**: Users can download the entire evaluation, including all expert opinions and the synthesis, as a standalone `HTML` document or as a flat `CSV` file for data manipulation.
 
 ## 5. Local Development
 

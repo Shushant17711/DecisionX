@@ -69,10 +69,7 @@ const BUILTIN_ROLE: Record<string, RoleId> = {
   strategist: "reviewer",
 };
 
-/** Keyword probes for bespoke experts, in the same precedence as ROLE_LENSES. */
 const ROLE_KEYWORDS: [RoleId, string[]][] = [
-  // "health" is deliberately absent: a public health officer is an authority,
-  // not a clinician, and would otherwise be captured here first.
   ["hospital", ["hospital", "clinic", "clinician", "patient", "nurse", "doctor", "physician", "medical", "surgeon", "pharma", "triage", "inpatient"]],
   ["authority", ["regulat", "complian", "legal", "lawyer", "counsel", "policy", "govern", "municipal", "audit", "ethic", "privacy", "licens", "inspector", "ombuds"]],
   ["investigator", ["critic", "adversar", "red team", "skeptic", "fraud", "investigat", "forensic", "research", "scientist", "statistic", "evidence"]],

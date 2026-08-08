@@ -26,7 +26,6 @@ import {
 import { personaRole, verdictStatus, type RoleId, type StatusId } from "@/lib/roles";
 import { seedSamples } from "@/lib/samples";
 
-// React hook for history store synchronization.
 function useHistory(): HistoryEntry[] {
   return useSyncExternalStore(
     subscribeHistory,
@@ -42,7 +41,6 @@ function verdictClass(verdict: string) {
   return "verdict-caution";
 }
 
-// History sidebar component.
 export function HistorySidebar({
   open,
   onClose,
@@ -59,7 +57,6 @@ export function HistorySidebar({
   );
 }
 
-// History panel; resets state on unmount.
 function HistoryPanel({
   onClose,
   activeId,
@@ -82,7 +79,6 @@ function HistoryPanel({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    // Move focus into the panel so keyboard users are not left behind it.
     const t = window.setTimeout(
       () => (searchRef.current ?? closeRef.current)?.focus(),
       60,
@@ -370,7 +366,6 @@ function HistoryPanel({
   );
 }
 
-// Sidebar toggle button.
 export function HistoryToggle({ onClick }: { onClick: () => void }) {
   const count = useHistory().length;
 

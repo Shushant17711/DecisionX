@@ -27,9 +27,8 @@ MAX_TITLE = 80
 MAX_NOTE = 160
 MAX_UNIT = 8
 
-# Field must be INSIDE the schema shape or models will drop it.
 CHART_SCHEMA_FIELD = """\
-  "chart": {          // OPTIONAL — see rules below. Omit the key when they don't apply.
+  "chart": {          
     "type": "bar" | "line" | "split",
     "title": "<what the chart shows, under 80 chars>",
     "unit": "<short unit: %, INR, hrs, users — or empty string>",
@@ -54,7 +53,6 @@ Rules for the optional "chart" field:
     labels under 28 characters. The values must differ from each other.
 """
 
-# Wild spread in bar charts usually indicates a dual-scale mistake.
 MAX_BAR_MAGNITUDE_SPREAD = 100
 
 
@@ -72,7 +70,6 @@ def _coerce_number(value):
         number = float(value)
     elif isinstance(value, str):
         cleaned = value.strip().replace(",", "").replace("%", "")
-        # Strip a leading currency symbol or code the model tacked on
         for prefix in ("₹", "$", "€", "£", "INR", "USD", "Rs.", "Rs"):
             if cleaned.startswith(prefix):
                 cleaned = cleaned[len(prefix) :].strip()
@@ -117,7 +114,6 @@ def sanitize_chart(raw) -> dict | None:
         value = _coerce_number(item.get("value"))
         if not label or value is None:
             continue
-        # A repeated category means the model lost track of its own axis.
         key = label.lower()
         if key in seen_labels:
             continue
@@ -129,20 +125,17 @@ def sanitize_chart(raw) -> dict | None:
     if len(points) < MIN_POINTS:
         return None
 
-    # A flat series carries no information a sentence could not carry better.
     values = [p["value"] for p in points]
     if all(v == values[0] for v in values):
         return None
 
     if chart_type == "split":
-        # Part-to-whole is meaningless with negatives or an empty whole.
         if any(v < 0 for v in values) or sum(values) <= 0:
             return None
 
     if chart_type == "bar" and len(values) >= 3:
         magnitudes = [abs(v) for v in values if v != 0]
         if magnitudes and max(magnitudes) / min(magnitudes) > MAX_BAR_MAGNITUDE_SPREAD:
-            # Reject mixed-scale bars; small bars are invisible.
             return None
 
     return {

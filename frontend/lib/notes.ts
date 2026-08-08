@@ -1,5 +1,3 @@
-// Reviewer notes, keyed by evaluation id. Local to this browser, like history.
-
 const KEY = "decisionx.notes.v1";
 
 function readAll(): Record<string, string> {

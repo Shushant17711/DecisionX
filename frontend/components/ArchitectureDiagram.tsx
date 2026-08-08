@@ -1,7 +1,5 @@
 "use client";
 
-// Pipeline diagram showing concurrent execution to explain cost/speed scaling.
-
 const AGENT_ROWS = [30, 74, 118, 162, 206];
 
 const STAGE = { w: 140, h: 64 };
@@ -76,7 +74,6 @@ function Stage({
 }
 
 function Arrow({ x1, x2, y1 = MID, y2 = MID }: { x1: number; x2: number; y1?: number; y2?: number }) {
-  // Curve only where the line actually changes row; a straight run stays straight.
   const d =
     y1 === y2
       ? `M${x1} ${y1} H${x2}`

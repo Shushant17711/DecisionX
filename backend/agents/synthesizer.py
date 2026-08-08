@@ -22,22 +22,16 @@ from agents.charts import CHART_SCHEMA_PROMPT, sanitize_charts
 from agents.llm_client import async_call_llm, available_providers
 
 
-# ── Provider chain: try each in order until one succeeds ──
 _PROVIDER_CHAIN = [
     {"provider": "groq",        "model": "llama-3.3-70b-versatile",              "timeout": 25.0},
     {"provider": "nvidia",      "model": "meta/llama-3.3-70b-instruct",          "timeout": 25.0},
     {"provider": "openrouter",  "model": "nvidia/nemotron-3-ultra-550b-a55b:free", "timeout": 35.0},
 ]
 
-# Hard ceiling on synthesis; fallback to local to unblock the page.
 _SYNTHESIS_DEADLINE = 55.0
 
 
 def _build_local_synthesis(persona_results: list[dict], idea: str, scores: list[float]) -> dict:
-    """
-    Last-resort synthesis built entirely from persona data (no LLM call).
-    Guarantees non-empty SWOT / action-plan fields.
-    """
     all_strengths: list[str] = []
     all_concerns: list[str] = []
     all_recommendations: list[str] = []
@@ -115,16 +109,10 @@ def _build_local_synthesis(persona_results: list[dict], idea: str, scores: list[
 
 
 async def synthesize_verdict(persona_results: list[dict], idea: str, context: str = "") -> dict:
-    """
-    Merge all expert analyses into a unified boardroom verdict.
-    Surfaces disagreements as the most valuable output.
-    """
-
     persona_summaries = []
     scores = []
     for p in persona_results:
         a = p["analysis"]
-        # Skip failed agents; placeholder score of 5 would skew the average.
         if a.get("_failed"):
             continue
         scores.append(a.get("score", 5))
@@ -178,7 +166,6 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
 
     user_prompt = "\n".join(user_parts)
 
-    # ── Try each provider in the chain until one produces valid synthesis ──
     result = None
     last_error = ""
     started = time.perf_counter()
@@ -188,10 +175,8 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
         if attempt["provider"] not in usable:
             continue
         if time.perf_counter() - started > _SYNTHESIS_DEADLINE:
-            print("[Synthesizer] deadline reached — falling back to local synthesis")
             break
         try:
-            print(f"[Synthesizer] Trying {attempt['provider']} / {attempt['model']} ...")
             candidate = await async_call_llm(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
@@ -217,19 +202,15 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
                 raise ValueError("Synthesis JSON present but SWOT arrays are all empty")
 
             result = candidate
-            print(f"[Synthesizer] Success via {attempt['provider']} in {time.perf_counter() - started:.1f}s")
             break
 
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             last_error = str(exc)
-            print(f"[Synthesizer] {attempt['provider']} failed: {last_error[:200]}")
             continue
 
-    # ── If every provider failed, build a local synthesis from persona data ──
     if result is None:
-        print(f"[Synthesizer] All providers failed. Building local synthesis from persona data.")
         result = _build_local_synthesis(persona_results, idea, scores)
 
 
@@ -241,10 +222,8 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
 
     result["consensus_percentage"] = consensus_pct
 
-    # Model-authored charts are estimates and are validated before they survive.
     result["charts"] = sanitize_charts(result.get("charts"), limit=2)
 
-    # Score spread chart is built from real data, not estimated by model.
     real_scores = [
         (p["name"], p["analysis"].get("score"))
         for p in persona_results
@@ -270,7 +249,6 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
     result["failed_agents"] = [
         p["name"] for p in persona_results if p["analysis"].get("_failed")
     ]
-    # Flag if nobody answered to avoid rendering a fake 5/10 verdict.
     result["panel_unreachable"] = bool(persona_results) and not scores
 
     return result
