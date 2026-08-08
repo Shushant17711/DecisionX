@@ -2,11 +2,11 @@
 
 DecisionX is a generalized, multi-agent idea evaluation platform. It allows you to input any business, technical, or creative idea and have it rigorously evaluated by a dynamically assembled panel of AI expert personas. 
 
-![Main Screen UI Placeholder](/images/main-screen-placeholder.png)
-*Placeholder: Main Screen UI - Idea submission and panel selection*
+![Dashboard Image](images/Dashboard_image.png)
+*Main Screen UI - Dashboard*
 
-![Result Page Placeholder](/images/result-page-placeholder.png)
-*Placeholder: Result Page - Boardroom Verdict and individual expert cards*
+![Result Page Image](images/Result_page.png)
+*Result Page - Boardroom Verdict and individual expert cards*
 
 ## ✨ Features
 - **Dynamic Persona Assembly**: Selects from 12 built-in experts (Investor, Engineer, Critic, etc.) or uses an LLM-driven "Panel Architect" to invent bespoke personas tailored specifically to your idea.
