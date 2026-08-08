@@ -454,6 +454,145 @@
     }
   }
 
+  /* ── The report sheet ─────────────────────────────────────────
+     A report is read end to end, printed, and handed to someone who was not in
+     the room. So it is drawn on paper rather than lacquer — its own palette,
+     scoped to .doc, inverted from the product chrome around it. Warm paper and
+     brown-black ink, never white-on-grey; the gold survives at 48% lightness,
+     which is where it clears 4.5:1 on the sheet. */
+
+  .doc {
+    --paper: oklch(97.6% 0.008 85);
+    --paper-panel: oklch(99.5% 0.003 85);
+    --doc-ink: oklch(24% 0.012 70);
+    --doc-body: oklch(40% 0.012 70);
+    --doc-muted: oklch(54% 0.012 70);
+    --doc-rule: oklch(24% 0.012 70 / 0.15);
+    --doc-accent: oklch(48% 0.115 74);
+    --doc-go: oklch(45% 0.09 188);
+    --doc-caution: oklch(48% 0.115 74);
+    --doc-no: oklch(48% 0.16 27);
+
+    background: var(--paper);
+    color: var(--doc-body);
+    border-radius: 3px;
+  }
+
+  .doc h1,
+  .doc h2,
+  .doc h3,
+  .doc h4 {
+    color: var(--doc-ink);
+    text-wrap: balance;
+  }
+
+  .doc-card {
+    background: var(--paper-panel);
+    border: 1px solid var(--doc-rule);
+    border-radius: 3px;
+  }
+
+  .doc-label {
+    font-size: 0.6875rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--doc-muted);
+    font-weight: 500;
+  }
+
+  .doc-tag {
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--doc-muted);
+    border: 1px solid var(--doc-rule);
+    border-radius: 2px;
+    padding: 0.05rem 0.3rem;
+  }
+
+  .doc-field {
+    background: var(--paper);
+    border: 1px solid var(--doc-rule);
+    color: var(--doc-ink);
+    transition: border-color 0.16s var(--ease-out);
+  }
+  .doc-field::placeholder {
+    color: var(--doc-muted);
+  }
+  .doc-field:focus {
+    border-color: var(--doc-accent);
+    outline: none;
+  }
+  .doc-field:focus-visible {
+    outline: 2px solid var(--doc-accent);
+    outline-offset: 1px;
+  }
+
+  .doc-btn,
+  .doc-btn-primary {
+    border-radius: 3px;
+    transition:
+      transform 0.12s var(--ease-out),
+      border-color 0.16s var(--ease-out),
+      background-color 0.16s var(--ease-out);
+  }
+  .doc-btn {
+    border: 1px solid var(--doc-rule);
+    color: var(--doc-body);
+    background: transparent;
+  }
+  .doc-btn-primary {
+    border: 1px solid var(--doc-accent);
+    background: var(--doc-accent);
+    color: var(--paper);
+    font-weight: 600;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .doc-btn:hover {
+      border-color: var(--doc-muted);
+      background: oklch(24% 0.012 70 / 0.04);
+    }
+    .doc-btn-primary:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+  }
+  .doc-btn:active,
+  .doc-btn-primary:active:not(:disabled) {
+    transform: scale(0.985);
+    transition-duration: 0.08s;
+  }
+  .doc-btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  /* The report is a print target, so treat paper as a real viewport: drop the
+     app chrome and the lacquer ground, and keep cards off page breaks. */
+  @media print {
+    html,
+    body {
+      background: #fff;
+    }
+    body::before {
+      display: none;
+    }
+    .doc {
+      --paper: #fff;
+      --paper-panel: #fff;
+      border-radius: 0;
+    }
+    .doc-card {
+      border-color: oklch(24% 0.012 70 / 0.25);
+    }
+    .break-inside-avoid {
+      break-inside: avoid;
+    }
+  }
+
+  @page {
+    margin: 15mm;
+  }
+
   /* ── Motion ───────────────────────────────────────────────── */
 
   /* The one authored moment: a card settling into place as its verdict lands.

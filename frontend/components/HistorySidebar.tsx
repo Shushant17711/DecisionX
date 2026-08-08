@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -12,6 +13,7 @@ import {
 } from "react";
 
 import { Icon } from "./Icon";
+import { RoleTabs, StatusChips } from "./RoleFilter";
 import {
   clearHistory,
   deleteEntry,
@@ -21,6 +23,8 @@ import {
   subscribeHistory,
   type HistoryEntry,
 } from "@/lib/history";
+import { personaRole, verdictStatus, type RoleId, type StatusId } from "@/lib/roles";
+import { seedSamples } from "@/lib/samples";
 
 // React hook for history store synchronization.
 function useHistory(): HistoryEntry[] {
@@ -66,6 +70,9 @@ function HistoryPanel({
   const router = useRouter();
   const entries = useHistory();
   const [query, setQuery] = useState("");
+  const [role, setRole] = useState<RoleId | "all">("all");
+  const [status, setStatus] = useState<StatusId | "all">("all");
+  const [seeding, setSeeding] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -86,16 +93,62 @@ function HistoryPanel({
     };
   }, [onClose]);
 
+  /* A record is relevant to a role when any expert on its panel answered to that
+     role, so "Authority" surfaces every past evaluation a compliance reader
+     should care about rather than only the ones about compliance. */
+  const rolesByEntry = useMemo(() => {
+    const map = new Map<string, Set<RoleId>>();
+    for (const entry of entries) {
+      const roles = new Set<RoleId>();
+      for (const persona of entry.result?.personas ?? []) roles.add(personaRole(persona));
+      map.set(entry.id, roles);
+    }
+    return map;
+  }, [entries]);
+
+  const roleCounts = useMemo(() => {
+    const counts = new Map<RoleId, number>();
+    for (const roles of rolesByEntry.values()) {
+      for (const id of roles) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  }, [rolesByEntry]);
+
+  const statusOf = useCallback(
+    (entry: HistoryEntry) => verdictStatus(entry.verdict, entry.result?.synthesis?.panel_unreachable),
+    [],
+  );
+
+  const statusCounts = useMemo(() => {
+    const counts = new Map<StatusId, number>();
+    for (const entry of entries) {
+      const id = statusOf(entry);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  }, [entries, statusOf]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return entries;
-    return entries.filter(
-      (e) =>
+    return entries.filter((e) => {
+      if (role !== "all" && !rolesByEntry.get(e.id)?.has(role)) return false;
+      if (status !== "all" && statusOf(e) !== status) return false;
+      if (!q) return true;
+      return (
         e.idea.toLowerCase().includes(q) ||
         e.verdict.toLowerCase().includes(q) ||
-        e.domains.some((d) => d.toLowerCase().includes(q)),
-    );
-  }, [entries, query]);
+        e.domains.some((d) => d.toLowerCase().includes(q))
+      );
+    });
+  }, [entries, query, role, status, rolesByEntry, statusOf]);
+
+  const scoped = role !== "all" || status !== "all" || query.trim().length > 0;
+
+  const loadSamples = async () => {
+    setSeeding(true);
+    await seedSamples();
+    setSeeding(false);
+  };
 
   const open_ = useCallback(
     (id: string) => {
@@ -135,7 +188,9 @@ function HistoryPanel({
             <p className="label mt-0.5">
               {entries.length === 0
                 ? "Nothing yet"
-                : `${entries.length} evaluation${entries.length === 1 ? "" : "s"}`}
+                : scoped
+                  ? `Showing ${filtered.length} of ${entries.length}`
+                  : `${entries.length} evaluation${entries.length === 1 ? "" : "s"}`}
             </p>
           </div>
           <button
@@ -149,20 +204,38 @@ function HistoryPanel({
         </header>
 
         {entries.length > 0 && (
-          <div className="relative border-b border-[var(--border-subtle)] px-5 py-3">
-            <Icon
-              name="search"
-              size={15}
-              className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-            />
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search ideas"
-              className="field py-2 pl-9 text-[0.8125rem]"
-            />
+          <div className="border-b border-[var(--border-subtle)]">
+            <div className="relative px-5 py-3">
+              <Icon
+                name="search"
+                size={15}
+                className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search ideas"
+                className="field py-2 pl-9 text-[0.8125rem]"
+              />
+            </div>
+
+            {/* Records scoped to the seat the reader is sitting in. */}
+            <div className="px-5">
+              <RoleTabs
+                counts={roleCounts}
+                total={entries.length}
+                value={role}
+                onChange={setRole}
+                everyoneLabel="All roles"
+              />
+            </div>
+            {statusCounts.size > 1 && (
+              <div className="px-5 py-3">
+                <StatusChips counts={statusCounts} value={status} onChange={setStatus} />
+              </div>
+            )}
           </div>
         )}
 
@@ -181,10 +254,18 @@ function HistoryPanel({
               <p className="mx-auto mt-2 max-w-[24ch] text-[0.8125rem] leading-relaxed text-[var(--text-muted)]">
                 Stored on this device only. Nothing is uploaded.
               </p>
+              <button
+                onClick={loadSamples}
+                disabled={seeding}
+                className="btn-quiet mx-auto mt-5 flex items-center gap-2 px-3.5 py-2 text-[0.8125rem]"
+              >
+                <Icon name="spark" size={15} />
+                {seeding ? "Loading…" : "Load sample records"}
+              </button>
             </div>
           ) : filtered.length === 0 ? (
-            <p className="px-5 py-12 text-center text-[0.875rem] text-[var(--text-muted)]">
-              No evaluation matches “{query.trim()}”.
+            <p className="px-5 py-12 text-center text-[0.875rem] leading-relaxed text-[var(--text-muted)]">
+              No evaluation matches this filter{query.trim() ? ` and “${query.trim()}”` : ""}.
             </p>
           ) : (
             <ul>
@@ -198,7 +279,7 @@ function HistoryPanel({
                     <button
                       onClick={() => open_(entry.id)}
                       aria-current={isActive ? "true" : undefined}
-                      className="w-full px-5 py-3.5 pr-11 text-left transition-colors duration-150 hover:bg-[var(--surface-elevated)]"
+                      className="w-full px-5 py-3.5 pr-[4.75rem] text-left transition-colors duration-150 hover:bg-[var(--surface-elevated)]"
                       style={
                         isActive
                           ? {
@@ -228,6 +309,15 @@ function HistoryPanel({
                         </time>
                       </div>
                     </button>
+                    <Link
+                      href={`/report?id=${entry.id}`}
+                      onClick={onClose}
+                      aria-label={`Open report: ${entry.idea.slice(0, 40)}`}
+                      title="Open the full report"
+                      className="absolute right-10 top-3 grid h-7 w-7 place-items-center rounded-[2px] text-[var(--text-muted)] opacity-0 transition-[opacity,color] duration-150 focus-visible:opacity-100 group-hover:opacity-100 hover:text-[var(--accent)]"
+                    >
+                      <Icon name="file" size={14} />
+                    </Link>
                     <button
                       onClick={() => deleteEntry(entry.id)}
                       aria-label={`Delete evaluation: ${entry.idea.slice(0, 40)}`}

@@ -1,5 +1,6 @@
 // LocalStorage-backed evaluation history; auto-evicts on quota limit.
 
+import type { BriefSnapshot } from "./brief";
 import type { EvalResult } from "./types";
 
 const KEY = "decisionx.history.v1";
@@ -15,6 +16,8 @@ export interface HistoryEntry {
   domains: string[];
   attachmentCount: number;
   result: EvalResult;
+  /** The inputs the panel was given. Absent on entries saved before the brief existed. */
+  brief?: BriefSnapshot;
 }
 
 const listeners = new Set<() => void>();
@@ -77,7 +80,7 @@ export function getEntry(id: string): HistoryEntry | undefined {
   return read().find((e) => e.id === id);
 }
 
-export function saveEvaluation(result: EvalResult): HistoryEntry {
+export function saveEvaluation(result: EvalResult, brief?: BriefSnapshot): HistoryEntry {
   const entry: HistoryEntry = {
     id: `ev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: Date.now(),
@@ -88,9 +91,23 @@ export function saveEvaluation(result: EvalResult): HistoryEntry {
     domains: result.detected_domains ?? [],
     attachmentCount: result.attachments?.filter((a) => a.included).length ?? 0,
     result,
+    brief,
   };
   write([entry, ...read()]);
   return entry;
+}
+
+/**
+ * Add entries that already carry their own ids — used to seed the worked sample
+ * records. Existing ids are left untouched so seeding twice is a no-op.
+ */
+export function importEntries(incoming: HistoryEntry[]): number {
+  const existing = read();
+  const known = new Set(existing.map((e) => e.id));
+  const fresh = incoming.filter((e) => !known.has(e.id));
+  if (fresh.length === 0) return 0;
+  write([...fresh, ...existing].sort((a, b) => b.createdAt - a.createdAt));
+  return fresh.length;
 }
 
 export function deleteEntry(id: string) {

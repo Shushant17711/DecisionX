@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { HistorySidebar, HistoryToggle } from "@/components/HistorySidebar";
 import { ChartTile } from "@/components/ChartTile";
+import { DownloadMenu } from "@/components/DownloadMenu";
 import { Icon, personaIcon } from "@/components/Icon";
+import { RoleTabs, StatusChips } from "@/components/RoleFilter";
 import { ScoreMark } from "@/components/ScoreMark";
 import {
   getServerSnapshot,
@@ -16,6 +18,9 @@ import {
   resetEvaluation,
   subscribe,
 } from "@/lib/evaluation";
+import { getEntry } from "@/lib/history";
+import { getNote } from "@/lib/notes";
+import { personaRole, personaStatus, roleLens, tallyRoles, type RoleId, type StatusId } from "@/lib/roles";
 import type { Chart, Disagreement, Expert, PersonaResult, Synthesis } from "@/lib/types";
 
 /* ─── Verdict vocabulary ─── */
@@ -251,6 +256,9 @@ function ResultsView() {
   const historyId = params.get("id");
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  const [role, setRole] = useState<RoleId | "all">("all");
+  const [status, setStatus] = useState<StatusId | "all">("all");
+
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const notFound = state.status === "missing";
 
@@ -275,6 +283,47 @@ function ResultsView() {
   const answered = useMemo(() => new Set(state.personas.map((p) => p.key)), [state.personas]);
   const pending = state.experts.filter((e) => !answered.has(e.key));
   const synthesis: Synthesis | undefined = state.result?.synthesis;
+
+  /* ── Role and status lenses over the panel ──
+     Counts come from every seat on the panel, answered or not, so a tab never
+     appears and then vanishes as verdicts arrive. */
+  const roleCounts = useMemo(
+    () => tallyRoles(state.experts.length ? state.experts : state.personas),
+    [state.experts, state.personas],
+  );
+  const statusCounts = useMemo(() => {
+    const counts = new Map<StatusId, number>();
+    for (const persona of state.personas) {
+      const id = personaStatus(persona);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  }, [state.personas]);
+
+  const matchesRole = useCallback(
+    (expert: { key: string; role: string; name: string }) =>
+      role === "all" || personaRole(expert) === role,
+    [role],
+  );
+
+  const shownPersonas = useMemo(
+    () =>
+      state.personas.filter(
+        (p) => matchesRole(p) && (status === "all" || personaStatus(p) === status),
+      ),
+    [state.personas, matchesRole, status],
+  );
+  // A seat with no verdict yet has no status, so a status filter excludes it.
+  const shownPending = useMemo(
+    () => (status === "all" ? pending.filter(matchesRole) : []),
+    [pending, matchesRole, status],
+  );
+
+  const filtered = role !== "all" || status !== "all";
+  const shownCount = shownPersonas.length + shownPending.length;
+
+  // The stored record is what an export reads; it exists once the run has saved.
+  const entry = state.historyId ? getEntry(state.historyId) : undefined;
 
   // Real panel data first, then whatever the synthesizer chose to draw.
   const boardCharts = useMemo(
@@ -336,6 +385,24 @@ function ResultsView() {
       onCloseHistory={() => setHistoryOpen(false)}
       activeId={state.historyId}
       onNew={startNew}
+      actions={
+        entry && (
+          <>
+            <Link
+              href={`/report?id=${entry.id}`}
+              className="btn-quiet flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] no-underline"
+            >
+              <Icon name="file" size={15} />
+              <span className="hidden sm:inline">Report</span>
+            </Link>
+            <DownloadMenu
+              entry={entry}
+              note={getNote(entry.id)}
+              onPdf={() => router.push(`/report?id=${entry.id}&print=1`)}
+            />
+          </>
+        )
+      }
     >
       {/* ── The brief ── */}
       <section className="pt-10">
@@ -509,17 +576,59 @@ function ResultsView() {
       {/* ── The panel ── */}
       {(state.personas.length > 0 || pending.length > 0) && (
         <section className="mt-14">
-          <SectionHeading count={total ? `${done} of ${total}` : undefined}>
+          <SectionHeading
+            count={
+              filtered
+                ? `Showing ${shownCount} of ${done + pending.length}`
+                : total
+                  ? `${done} of ${total}`
+                  : undefined
+            }
+          >
             The panel
           </SectionHeading>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {state.personas.map((p) => (
-              <ExpertCard key={p.key} persona={p} />
-            ))}
-            {pending.map((e) => (
-              <AwaitingCard key={e.key} expert={e} />
-            ))}
+
+          {/* Whose seat you are reading from. Counts sit on the controls so the
+              shape of the panel is legible before anything is clicked. */}
+          <div className="mb-6">
+            <RoleTabs counts={roleCounts} total={done + pending.length} value={role} onChange={setRole} />
+            {(statusCounts.size > 1 || filtered) && (
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <StatusChips counts={statusCounts} value={status} onChange={setStatus} />
+                {filtered && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole("all");
+                      setStatus("all");
+                    }}
+                    className="flex items-center gap-1.5 text-[0.75rem] text-[var(--text-muted)] transition-colors duration-150 hover:text-[var(--text-secondary)]"
+                  >
+                    <Icon name="close" size={12} />
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
           </div>
+
+          {shownCount === 0 ? (
+            <p className="panel px-5 py-8 text-center text-[0.875rem] leading-relaxed text-[var(--text-muted)]">
+              No expert on this panel matches{" "}
+              {role !== "all" && <span className="text-[var(--text-secondary)]">{roleLens(role).label}</span>}
+              {role !== "all" && status !== "all" && " with this verdict"}
+              {role === "all" && "this verdict"}.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {shownPersonas.map((p) => (
+                <ExpertCard key={p.key} persona={p} />
+              ))}
+              {shownPending.map((e) => (
+                <AwaitingCard key={e.key} expert={e} />
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -626,6 +735,39 @@ function ResultsView() {
         </>
       )}
 
+      {/* ── Take it with you ── */}
+      {entry && (
+        <section className="mt-16">
+          <div
+            className="panel seam flex flex-col gap-5 p-6 md:flex-row md:items-center md:gap-8 md:p-7"
+            style={{ "--seam-color": "var(--patina)" } as React.CSSProperties}
+          >
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[1.0625rem]">Take the verdict with you</h2>
+              <p className="measure mt-2 text-[0.875rem] leading-relaxed text-[var(--text-secondary)]">
+                The full report lays out the brief, every expert grouped by the role they answer to,
+                the splits and the action plan as one document — ready to print or hand over.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
+              <Link
+                href={`/report?id=${entry.id}`}
+                className="btn-primary flex items-center gap-2 px-4 py-2.5 text-[0.875rem] no-underline"
+              >
+                <Icon name="file" size={16} />
+                Report
+              </Link>
+              <DownloadMenu
+                entry={entry}
+                note={getNote(entry.id)}
+                align="left"
+                onPdf={() => router.push(`/report?id=${entry.id}&print=1`)}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
       <footer className="mt-16 border-t border-[var(--border-subtle)] py-8">
         <p className="measure text-[0.75rem] leading-relaxed text-[var(--text-muted)]">
           AI-generated analysis for thinking through an idea. Not financial, legal, medical, or
@@ -643,6 +785,7 @@ function Shell({
   onCloseHistory,
   activeId,
   onNew,
+  actions,
 }: {
   children: React.ReactNode;
   onOpenHistory: () => void;
@@ -650,6 +793,7 @@ function Shell({
   onCloseHistory: () => void;
   activeId?: string | null;
   onNew?: () => void;
+  actions?: React.ReactNode;
 }) {
   return (
     <div className="relative z-[1] min-h-dvh">
@@ -659,6 +803,7 @@ function Shell({
           <Link href="/" className="wordmark mr-auto no-underline">
             DecisionX
           </Link>
+          {actions}
           <HistoryToggle onClick={onOpenHistory} />
           {onNew && (
             <button onClick={onNew} className="btn-quiet flex items-center gap-2 px-3 py-1.5 text-[0.8125rem]">

@@ -1,14 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { ArchitectureDiagram } from "@/components/ArchitectureDiagram";
+import { BriefChecklist } from "@/components/BriefChecklist";
 import { FileDrop } from "@/components/FileDrop";
 import { HistorySidebar, HistoryToggle } from "@/components/HistorySidebar";
 import { Icon } from "@/components/Icon";
 import { PanelSizeControl } from "@/components/PanelSizeControl";
+import {
+  buildChecklist,
+  composeContext,
+  getDraft,
+  getDraftServerSnapshot,
+  replaceDraft,
+  sampleSourceFile,
+  SAMPLE_BRIEF,
+  snapshot,
+  subscribeDraft,
+  summarise,
+  updateDraft,
+  type BriefField,
+} from "@/lib/brief";
 import { startEvaluation } from "@/lib/evaluation";
+import { FEATURED_SAMPLE_ID, seedSamples } from "@/lib/samples";
 
 const EXAMPLE_IDEAS = [
   "A tiffin subscription for college students in Pune — home-style meals, monthly plans, routed by a demand model instead of fixed menus",
@@ -20,12 +36,16 @@ const EXAMPLE_IDEAS = [
 
 export default function HomePage() {
   const router = useRouter();
-  const [idea, setIdea] = useState("");
-  const [context, setContext] = useState("");
-  const [showContext, setShowContext] = useState(false);
+  const draft = useSyncExternalStore(subscribeDraft, getDraft, getDraftServerSnapshot);
   const [files, setFiles] = useState<File[]>([]);
-  const [panelSize, setPanelSize] = useState(5);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [sampleState, setSampleState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+
+  const ideaRef = useRef<HTMLTextAreaElement>(null);
+  const criteriaRef = useRef<HTMLTextAreaElement>(null);
+  const contextRef = useRef<HTMLTextAreaElement>(null);
+  const constraintsRef = useRef<HTMLTextAreaElement>(null);
+  const sourcesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -38,11 +58,47 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const summary = useMemo(
+    () => summarise(buildChecklist(draft, files.length)),
+    [draft, files.length],
+  );
+
+  const focusField = (field: BriefField) => {
+    const target =
+      field === "idea"
+        ? ideaRef.current
+        : field === "criteria"
+          ? criteriaRef.current
+          : field === "context"
+            ? contextRef.current
+            : field === "constraints"
+              ? constraintsRef.current
+              : // FileDrop's own trigger — the checklist row should land on the
+                // control that satisfies it, not merely near it.
+                sourcesRef.current?.querySelector<HTMLButtonElement>("button");
+    target?.scrollIntoView({ block: "center", behavior: "smooth" });
+    target?.focus({ preventScroll: true });
+  };
+
   const submit = () => {
-    const trimmed = idea.trim();
-    if (!trimmed) return;
-    startEvaluation({ idea: trimmed, context: context.trim(), panelSize, files });
+    const idea = draft.idea.trim();
+    if (!idea) return;
+    startEvaluation({
+      idea,
+      context: composeContext(draft),
+      panelSize: draft.panelSize,
+      files,
+      brief: snapshot(draft, summary, files.map((f) => f.name)),
+    });
     router.push("/results");
+  };
+
+  const loadWorkedExample = async () => {
+    setSampleState("loading");
+    replaceDraft({ ...SAMPLE_BRIEF, sourceNames: ["unit-economics.csv"], updatedAt: Date.now() });
+    setFiles([sampleSourceFile()]);
+    const outcome = await seedSamples();
+    setSampleState(outcome.ok ? "ready" : "failed");
   };
 
   return (
@@ -57,8 +113,8 @@ export default function HomePage() {
       <main className="mx-auto max-w-[76rem] px-6 md:px-10">
         {/* Hero — offset rather than centered, so the page reads left-to-right
             into the form instead of stacking symmetric blocks. */}
-        <section className="grid gap-x-16 gap-y-12 pb-8 pt-16 md:pt-24 lg:grid-cols-[1.05fr_1fr]">
-          <div>
+        <section className="grid items-start gap-x-16 gap-y-12 pb-8 pt-16 md:pt-24 lg:grid-cols-[1.05fr_1fr]">
+          <div className="lg:sticky lg:top-10">
             <h1 className="max-w-[14ch]">
               Your idea,
               <br />
@@ -84,6 +140,42 @@ export default function HomePage() {
                 </div>
               ))}
             </dl>
+
+            {/* The worked example: a complete brief and three finished evaluations,
+                so the filters and the report have something real to act on. */}
+            <div className="mt-10 border-t border-[var(--border-subtle)] pt-6">
+              <p className="label">First time here</p>
+              <p className="measure mt-2.5 text-[0.875rem] leading-relaxed text-[var(--text-secondary)]">
+                Load a worked example: every section of the brief filled in, with three finished
+                evaluations added to your history to read and export.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={loadWorkedExample}
+                  disabled={sampleState === "loading"}
+                  className="btn-quiet flex items-center gap-2 px-3.5 py-2 text-[0.8125rem]"
+                >
+                  <Icon name="spark" size={15} />
+                  {sampleState === "loading" ? "Loading…" : "Load a worked example"}
+                </button>
+                {sampleState === "ready" && (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/report?id=${FEATURED_SAMPLE_ID}`)}
+                    className="flex items-center gap-1.5 text-[0.8125rem] text-[var(--accent)]"
+                  >
+                    Open the sample report
+                    <Icon name="arrowRight" size={14} />
+                  </button>
+                )}
+                {sampleState === "failed" && (
+                  <span className="text-[0.8125rem] text-[var(--text-muted)]">
+                    The brief is filled in, but the sample records could not be read.
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Form */}
@@ -93,8 +185,9 @@ export default function HomePage() {
             </label>
             <textarea
               id="idea"
-              value={idea}
-              onChange={(e) => setIdea(e.target.value)}
+              ref={ideaRef}
+              value={draft.idea}
+              onChange={(e) => updateDraft({ idea: e.target.value })}
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submit();
               }}
@@ -103,54 +196,80 @@ export default function HomePage() {
               className="field mt-2.5 resize-y"
             />
 
-            <div className="mt-5">
+            <label htmlFor="criteria" className="label mt-5 block">
+              Success criteria
+            </label>
+            <textarea
+              id="criteria"
+              ref={criteriaRef}
+              value={draft.criteria}
+              onChange={(e) => updateDraft({ criteria: e.target.value })}
+              placeholder="The bar this has to clear — margin, adoption, timeline, risk you can accept…"
+              rows={2}
+              className="field mt-2.5 resize-y text-[0.875rem]"
+            />
+
+            <label htmlFor="context" className="label mt-5 block">
+              Decision context
+            </label>
+            <textarea
+              id="context"
+              ref={contextRef}
+              value={draft.context}
+              onChange={(e) => updateDraft({ context: e.target.value })}
+              placeholder="Stage, budget, timeline, what you have already tried…"
+              rows={3}
+              className="field mt-2.5 resize-y text-[0.875rem]"
+            />
+
+            <label htmlFor="constraints" className="label mt-5 block">
+              Constraints <span className="normal-case tracking-normal">— optional</span>
+            </label>
+            <textarea
+              id="constraints"
+              ref={constraintsRef}
+              value={draft.constraints}
+              onChange={(e) => updateDraft({ constraints: e.target.value })}
+              placeholder="What cannot change: regulation, headcount, a ceiling you will not cross…"
+              rows={2}
+              className="field mt-2.5 resize-y text-[0.875rem]"
+            />
+
+            <div className="mt-5" ref={sourcesRef}>
               <FileDrop files={files} onChange={setFiles} />
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowContext((v) => !v)}
-              aria-expanded={showContext}
-              className="mt-4 flex items-center gap-1.5 text-[0.8125rem] text-[var(--text-muted)] transition-colors duration-150 hover:text-[var(--text-secondary)]"
-            >
-              <Icon
-                name="chevronDown"
-                size={14}
-                style={{
-                  transform: showContext ? "rotate(0deg)" : "rotate(-90deg)",
-                  transition: "transform 0.16s var(--ease-out)",
-                }}
-              />
-              Add written context
-            </button>
+            <hr className="my-6 border-0 border-t border-[var(--border-subtle)]" />
 
-            {showContext && (
-              <textarea
-                id="context"
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                placeholder="Budget, timeline, what you have already tried, constraints you cannot change…"
-                rows={3}
-                className="field mt-2.5 resize-y text-[0.875rem]"
-              />
-            )}
+            <PanelSizeControl value={draft.panelSize} onChange={(n) => updateDraft({ panelSize: n })} />
 
             <hr className="my-6 border-0 border-t border-[var(--border-subtle)]" />
 
-            <PanelSizeControl value={panelSize} onChange={setPanelSize} />
+            <BriefChecklist summary={summary} onFocusField={focusField} />
 
             <button
               type="button"
               onClick={submit}
-              disabled={!idea.trim()}
+              disabled={!draft.idea.trim()}
               className="btn-primary mt-6 flex w-full items-center justify-center gap-2 py-3.5 text-[0.9375rem]"
             >
               Convene the panel
               <Icon name="arrowRight" size={17} />
             </button>
-            <p className="mt-2.5 text-center text-[0.75rem] text-[var(--text-muted)]">
-              Results stream in as each expert finishes
-            </p>
+
+            {summary.missingRequired.length > 0 ? (
+              <p className="mt-2.5 flex items-start justify-center gap-1.5 text-center text-[0.75rem] leading-relaxed text-[var(--text-muted)]">
+                <Icon name="alert" size={13} className="mt-0.5 shrink-0 text-[var(--accent)]" />
+                <span>
+                  {summary.missingRequired.join(" and ")} still open — the panel will run on a
+                  thinner brief.
+                </span>
+              </p>
+            ) : (
+              <p className="mt-2.5 text-center text-[0.75rem] text-[var(--text-muted)]">
+                Results stream in as each expert finishes
+              </p>
+            )}
           </div>
         </section>
 
@@ -162,7 +281,7 @@ export default function HomePage() {
               <li key={example}>
                 <button
                   type="button"
-                  onClick={() => setIdea(example)}
+                  onClick={() => updateDraft({ idea: example })}
                   className="panel panel-interactive h-full w-full px-4 py-3 text-left text-[0.8125rem] leading-relaxed text-[var(--text-secondary)]"
                 >
                   {example}

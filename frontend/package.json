@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sample:export": "node scripts/generate-sample-export.mjs"
   },
   "dependencies": {
     "daisyui": "^5.7.16",

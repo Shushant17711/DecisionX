@@ -1,5 +1,6 @@
 // Module-level singleton store for live evaluation state.
 
+import type { BriefSnapshot } from "./brief";
 import { getEntry, saveEvaluation } from "./history";
 import type { Attachment, EvalResult, Expert, PersonaResult, StreamEvent } from "./types";
 
@@ -21,6 +22,8 @@ export interface EvalState {
   historyId: string | null;
   error: string | null;
   startedAt: number;
+  /** The brief this run was given, carried through so it lands in history. */
+  brief: BriefSnapshot | null;
 }
 
 const IDLE: EvalState = {
@@ -36,6 +39,7 @@ const IDLE: EvalState = {
   historyId: null,
   error: null,
   startedAt: 0,
+  brief: null,
 };
 
 let state: EvalState = IDLE;
@@ -72,10 +76,11 @@ export interface EvaluationRequest {
   context: string;
   panelSize: number;
   files: File[];
+  brief?: BriefSnapshot;
 }
 
 // Kick off a streamed evaluation.
-export function startEvaluation({ idea, context, panelSize, files }: EvaluationRequest) {
+export function startEvaluation({ idea, context, panelSize, files, brief }: EvaluationRequest) {
   controller?.abort();
   controller = new AbortController();
   const signal = controller.signal;
@@ -87,6 +92,7 @@ export function startEvaluation({ idea, context, panelSize, files }: EvaluationR
     idea,
     panelSize,
     startedAt: Date.now(),
+    brief: brief ?? null,
   };
   listeners.forEach((l) => l());
 
@@ -153,7 +159,7 @@ function applyEvent(event: StreamEvent) {
       set({ personas: [...state.personas, event.persona] });
       break;
     case "done": {
-      const entry = saveEvaluation(event.result);
+      const entry = saveEvaluation(event.result, state.brief ?? undefined);
       set({
         status: "done",
         stage: "complete",
@@ -228,6 +234,7 @@ export function loadFromHistory(historyId: string) {
     attachments: result.attachments ?? [],
     result,
     historyId: entry.id,
+    brief: entry.brief ?? null,
   };
   listeners.forEach((l) => l());
 }

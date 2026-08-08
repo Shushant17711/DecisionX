@@ -1,1 +1,922 @@
-[{"id":"ev_seed_demo","createdAt":1786095263405,"idea":"A tiffin subscription for college students in Pune — home-style meals on monthly plans, with routes decided by a demand model rather than a fixed weekly menu.","verdict":"Caution","score":5.5,"panelSize":6,"domains":["food","business","logistics"],"attachmentCount":1,"result":{"idea":"A tiffin subscription for college students in Pune — home-style meals on monthly plans, with routes decided by a demand model rather than a fixed weekly menu.","detected_domains":["food","business","logistics"],"elapsed_seconds":11.4,"attachments":[{"name":"unit-economics.csv","bytes":4820,"included":true,"truncated":false},{"name":"pitch-deck.key","bytes":2400000,"included":false,"error":"Unsupported file type — upload a PDF, CSV, spreadsheet, or text file"}],"selected_experts":[],"personas":[{"key":"operator","name":"The Operator","role":"Operations / Logistics Expert","icon":"layers","color":"#c97a4a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"The kitchen works; the last mile is where this dies.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"bar","title":"Cost per delivered meal by route density","unit":"INR","note":"Assumes a 4km radius and one rider per route.","data":[{"label":"2 per route","value":71},{"label":"4 per route","value":44},{"label":"6 per route","value":31},{"label":"8 per route","value":24}]}}},{"key":"economist","name":"The Economist","role":"Financial Analyst / CFO","icon":"wallet","color":"#7c7fd4","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"At ₹90 a meal the contribution margin is negative until batch density triples.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"split","title":"Where each ₹90 goes today","unit":"INR","note":"Excludes founder salary and any marketing spend.","data":[{"label":"Ingredients","value":38},{"label":"Delivery","value":29},{"label":"Kitchen labour","value":16},{"label":"Packaging","value":8},{"label":"Margin","value":9}]}}},{"key":"user","name":"The User","role":"Target Customer","icon":"user","color":"#4fa36b","custom":false,"analysis":{"verdict":"Bullish","score":8,"headline":"I would pay for this the week I moved into the hostel.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"regulator","name":"The Regulator","role":"Legal / Compliance Expert","icon":"scales","color":"#c76b7a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"FSSAI is navigable, but not on the timeline in this plan.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"line","title":"Realistic subscriber ramp, first six months","unit":"","note":"Assumes launch is gated on FSSAI clearance in month two.","data":[{"label":"M1","value":0},{"label":"M2","value":20},{"label":"M3","value":85},{"label":"M4","value":150},{"label":"M5","value":210},{"label":"M6","value":265}]}}},{"key":"custom_the_hostel_warden","name":"The Hostel Warden","role":"Campus Operations Lead","icon":"shield","color":"#4ba3a0","custom":true,"analysis":{"verdict":"Cautious","score":5,"headline":"Nobody has asked whether the hostels will let you through the gate.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"critic","name":"The Critic","role":"Devil's Advocate","icon":"flame","color":"#c0523f","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"Three of these already died in Pune and the plan repeats their mistake.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}}],"synthesis":{"overall_score":5.5,"verdict":"Caution","executive_summary":"Real demand, real margin problem. Students want this and would pay, but the unit economics only work at a delivery density the plan does not explain how to reach. The operational and legal timelines are also longer than budgeted.","consensus_points":["The pain point is genuine and students articulate it unprompted.","Batch density, not menu quality, decides whether this survives.","The launch timeline underestimates food-safety registration."],"disagreements":[{"topic":"Whether the margin problem is fatal or solvable","sides":{"The Economist":"Negative contribution margin at current pricing is structural, not a scale problem.","The Operator":"Margin turns positive at eight deliveries per route; that is reachable in one hostel cluster."},"resolution":"Both are right at different densities. Prove eight-per-route in a single cluster before raising on the model."},{"topic":"Whether the demand model is a differentiator","sides":"The User and The Operator see it as invisible plumbing; The Critic argues it is complexity added before product-market fit is proven.","resolution":"Ship a fixed menu first. Add routing once you have four weeks of real order data to route on."}],"strengths":["Subscription revenue that can be forecast against kitchen capacity.","A user who describes the problem in their own words without prompting."],"weaknesses":["Contribution margin is negative below eight deliveries per route.","Semester breaks create churn the plan does not account for."],"opportunities":["Hostel-level bulk contracts remove the last-mile problem entirely.","Menu data becomes a supply-planning asset within two semesters."],"threats":["Incumbent aggregators can undercut on delivery for as long as it takes.","A single food-safety incident ends the business."],"action_plan_7_days":["Interview twenty students across three hostels about their current meal spend.","Rebuild the unit economics with delivery cost as a variable, not a constant.","Start the FSSAI registration; it gates everything downstream."],"action_plan_30_days":["Run one hostel block with a fixed menu and measure deliveries per route.","Sign a letter of intent with one hostel administration.","Decide on the demand model only after four weeks of real order data."],"final_recommendation":"Do not raise money on this yet. The demand is real enough to justify six weeks of work, but the margin story is unproven and the panel splits precisely on whether density is reachable. Run a single hostel block, measure deliveries per route, and let that number decide whether this is a business or an expensive way to feed people.","consensus_percentage":52,"agent_scores":{"The Operator":6,"The Economist":4,"The User":8,"The Regulator":6,"The Hostel Warden":5,"The Critic":4},"failed_agents":[],"score_chart":{"type":"bar","title":"How each expert scored it","unit":"/10","note":"","measured":true,"data":[{"label":"Operator","value":6},{"label":"Economist","value":4},{"label":"User","value":8},{"label":"Regulator","value":6},{"label":"Hostel Warden","value":5},{"label":"Critic","value":4}]},"charts":[{"type":"line","title":"Modelled break-even path","unit":"INR k","note":"At eight deliveries per route from month four onward.","data":[{"label":"M1","value":-92},{"label":"M2","value":-74},{"label":"M3","value":-41},{"label":"M4","value":-12},{"label":"M5","value":18},{"label":"M6","value":47}]}]}}},{"id":"ev_a","createdAt":1786077983405,"idea":"A carbon credit marketplace where small Indian manufacturers sell verified offsets without a broker.","verdict":"Go","score":7,"panelSize":8,"domains":["climate"],"attachmentCount":0,"result":{"idea":"A tiffin subscription for college students in Pune — home-style meals on monthly plans, with routes decided by a demand model rather than a fixed weekly menu.","detected_domains":["food","business","logistics"],"elapsed_seconds":11.4,"attachments":[{"name":"unit-economics.csv","bytes":4820,"included":true,"truncated":false},{"name":"pitch-deck.key","bytes":2400000,"included":false,"error":"Unsupported file type — upload a PDF, CSV, spreadsheet, or text file"}],"selected_experts":[],"personas":[{"key":"operator","name":"The Operator","role":"Operations / Logistics Expert","icon":"layers","color":"#c97a4a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"The kitchen works; the last mile is where this dies.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"bar","title":"Cost per delivered meal by route density","unit":"INR","note":"Assumes a 4km radius and one rider per route.","data":[{"label":"2 per route","value":71},{"label":"4 per route","value":44},{"label":"6 per route","value":31},{"label":"8 per route","value":24}]}}},{"key":"economist","name":"The Economist","role":"Financial Analyst / CFO","icon":"wallet","color":"#7c7fd4","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"At ₹90 a meal the contribution margin is negative until batch density triples.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"split","title":"Where each ₹90 goes today","unit":"INR","note":"Excludes founder salary and any marketing spend.","data":[{"label":"Ingredients","value":38},{"label":"Delivery","value":29},{"label":"Kitchen labour","value":16},{"label":"Packaging","value":8},{"label":"Margin","value":9}]}}},{"key":"user","name":"The User","role":"Target Customer","icon":"user","color":"#4fa36b","custom":false,"analysis":{"verdict":"Bullish","score":8,"headline":"I would pay for this the week I moved into the hostel.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"regulator","name":"The Regulator","role":"Legal / Compliance Expert","icon":"scales","color":"#c76b7a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"FSSAI is navigable, but not on the timeline in this plan.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"line","title":"Realistic subscriber ramp, first six months","unit":"","note":"Assumes launch is gated on FSSAI clearance in month two.","data":[{"label":"M1","value":0},{"label":"M2","value":20},{"label":"M3","value":85},{"label":"M4","value":150},{"label":"M5","value":210},{"label":"M6","value":265}]}}},{"key":"custom_the_hostel_warden","name":"The Hostel Warden","role":"Campus Operations Lead","icon":"shield","color":"#4ba3a0","custom":true,"analysis":{"verdict":"Cautious","score":5,"headline":"Nobody has asked whether the hostels will let you through the gate.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"critic","name":"The Critic","role":"Devil's Advocate","icon":"flame","color":"#c0523f","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"Three of these already died in Pune and the plan repeats their mistake.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}}],"synthesis":{"overall_score":5.5,"verdict":"Caution","executive_summary":"Real demand, real margin problem. Students want this and would pay, but the unit economics only work at a delivery density the plan does not explain how to reach. The operational and legal timelines are also longer than budgeted.","consensus_points":["The pain point is genuine and students articulate it unprompted.","Batch density, not menu quality, decides whether this survives.","The launch timeline underestimates food-safety registration."],"disagreements":[{"topic":"Whether the margin problem is fatal or solvable","sides":{"The Economist":"Negative contribution margin at current pricing is structural, not a scale problem.","The Operator":"Margin turns positive at eight deliveries per route; that is reachable in one hostel cluster."},"resolution":"Both are right at different densities. Prove eight-per-route in a single cluster before raising on the model."},{"topic":"Whether the demand model is a differentiator","sides":"The User and The Operator see it as invisible plumbing; The Critic argues it is complexity added before product-market fit is proven.","resolution":"Ship a fixed menu first. Add routing once you have four weeks of real order data to route on."}],"strengths":["Subscription revenue that can be forecast against kitchen capacity.","A user who describes the problem in their own words without prompting."],"weaknesses":["Contribution margin is negative below eight deliveries per route.","Semester breaks create churn the plan does not account for."],"opportunities":["Hostel-level bulk contracts remove the last-mile problem entirely.","Menu data becomes a supply-planning asset within two semesters."],"threats":["Incumbent aggregators can undercut on delivery for as long as it takes.","A single food-safety incident ends the business."],"action_plan_7_days":["Interview twenty students across three hostels about their current meal spend.","Rebuild the unit economics with delivery cost as a variable, not a constant.","Start the FSSAI registration; it gates everything downstream."],"action_plan_30_days":["Run one hostel block with a fixed menu and measure deliveries per route.","Sign a letter of intent with one hostel administration.","Decide on the demand model only after four weeks of real order data."],"final_recommendation":"Do not raise money on this yet. The demand is real enough to justify six weeks of work, but the margin story is unproven and the panel splits precisely on whether density is reachable. Run a single hostel block, measure deliveries per route, and let that number decide whether this is a business or an expensive way to feed people.","consensus_percentage":52,"agent_scores":{"The Operator":6,"The Economist":4,"The User":8,"The Regulator":6,"The Hostel Warden":5,"The Critic":4},"failed_agents":[],"score_chart":{"type":"bar","title":"How each expert scored it","unit":"/10","note":"","measured":true,"data":[{"label":"Operator","value":6},{"label":"Economist","value":4},{"label":"User","value":8},{"label":"Regulator","value":6},{"label":"Hostel Warden","value":5},{"label":"Critic","value":4}]},"charts":[{"type":"line","title":"Modelled break-even path","unit":"INR k","note":"At eight deliveries per route from month four onward.","data":[{"label":"M1","value":-92},{"label":"M2","value":-74},{"label":"M3","value":-41},{"label":"M4","value":-12},{"label":"M5","value":18},{"label":"M6","value":47}]}]}}},{"id":"ev_b","createdAt":1785987983405,"idea":"Résumé screening for HR teams under twenty people, built to strip identity signals before ranking.","verdict":"No-Go","score":3,"panelSize":12,"domains":["ai","business"],"attachmentCount":2,"result":{"idea":"A tiffin subscription for college students in Pune — home-style meals on monthly plans, with routes decided by a demand model rather than a fixed weekly menu.","detected_domains":["food","business","logistics"],"elapsed_seconds":11.4,"attachments":[{"name":"unit-economics.csv","bytes":4820,"included":true,"truncated":false},{"name":"pitch-deck.key","bytes":2400000,"included":false,"error":"Unsupported file type — upload a PDF, CSV, spreadsheet, or text file"}],"selected_experts":[],"personas":[{"key":"operator","name":"The Operator","role":"Operations / Logistics Expert","icon":"layers","color":"#c97a4a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"The kitchen works; the last mile is where this dies.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"bar","title":"Cost per delivered meal by route density","unit":"INR","note":"Assumes a 4km radius and one rider per route.","data":[{"label":"2 per route","value":71},{"label":"4 per route","value":44},{"label":"6 per route","value":31},{"label":"8 per route","value":24}]}}},{"key":"economist","name":"The Economist","role":"Financial Analyst / CFO","icon":"wallet","color":"#7c7fd4","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"At ₹90 a meal the contribution margin is negative until batch density triples.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"split","title":"Where each ₹90 goes today","unit":"INR","note":"Excludes founder salary and any marketing spend.","data":[{"label":"Ingredients","value":38},{"label":"Delivery","value":29},{"label":"Kitchen labour","value":16},{"label":"Packaging","value":8},{"label":"Margin","value":9}]}}},{"key":"user","name":"The User","role":"Target Customer","icon":"user","color":"#4fa36b","custom":false,"analysis":{"verdict":"Bullish","score":8,"headline":"I would pay for this the week I moved into the hostel.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"regulator","name":"The Regulator","role":"Legal / Compliance Expert","icon":"scales","color":"#c76b7a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"FSSAI is navigable, but not on the timeline in this plan.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"line","title":"Realistic subscriber ramp, first six months","unit":"","note":"Assumes launch is gated on FSSAI clearance in month two.","data":[{"label":"M1","value":0},{"label":"M2","value":20},{"label":"M3","value":85},{"label":"M4","value":150},{"label":"M5","value":210},{"label":"M6","value":265}]}}},{"key":"custom_the_hostel_warden","name":"The Hostel Warden","role":"Campus Operations Lead","icon":"shield","color":"#4ba3a0","custom":true,"analysis":{"verdict":"Cautious","score":5,"headline":"Nobody has asked whether the hostels will let you through the gate.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"critic","name":"The Critic","role":"Devil's Advocate","icon":"flame","color":"#c0523f","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"Three of these already died in Pune and the plan repeats their mistake.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}}],"synthesis":{"overall_score":5.5,"verdict":"Caution","executive_summary":"Real demand, real margin problem. Students want this and would pay, but the unit economics only work at a delivery density the plan does not explain how to reach. The operational and legal timelines are also longer than budgeted.","consensus_points":["The pain point is genuine and students articulate it unprompted.","Batch density, not menu quality, decides whether this survives.","The launch timeline underestimates food-safety registration."],"disagreements":[{"topic":"Whether the margin problem is fatal or solvable","sides":{"The Economist":"Negative contribution margin at current pricing is structural, not a scale problem.","The Operator":"Margin turns positive at eight deliveries per route; that is reachable in one hostel cluster."},"resolution":"Both are right at different densities. Prove eight-per-route in a single cluster before raising on the model."},{"topic":"Whether the demand model is a differentiator","sides":"The User and The Operator see it as invisible plumbing; The Critic argues it is complexity added before product-market fit is proven.","resolution":"Ship a fixed menu first. Add routing once you have four weeks of real order data to route on."}],"strengths":["Subscription revenue that can be forecast against kitchen capacity.","A user who describes the problem in their own words without prompting."],"weaknesses":["Contribution margin is negative below eight deliveries per route.","Semester breaks create churn the plan does not account for."],"opportunities":["Hostel-level bulk contracts remove the last-mile problem entirely.","Menu data becomes a supply-planning asset within two semesters."],"threats":["Incumbent aggregators can undercut on delivery for as long as it takes.","A single food-safety incident ends the business."],"action_plan_7_days":["Interview twenty students across three hostels about their current meal spend.","Rebuild the unit economics with delivery cost as a variable, not a constant.","Start the FSSAI registration; it gates everything downstream."],"action_plan_30_days":["Run one hostel block with a fixed menu and measure deliveries per route.","Sign a letter of intent with one hostel administration.","Decide on the demand model only after four weeks of real order data."],"final_recommendation":"Do not raise money on this yet. The demand is real enough to justify six weeks of work, but the margin story is unproven and the panel splits precisely on whether density is reachable. Run a single hostel block, measure deliveries per route, and let that number decide whether this is a business or an expensive way to feed people.","consensus_percentage":52,"agent_scores":{"The Operator":6,"The Economist":4,"The User":8,"The Regulator":6,"The Hostel Warden":5,"The Critic":4},"failed_agents":[],"score_chart":{"type":"bar","title":"How each expert scored it","unit":"/10","note":"","measured":true,"data":[{"label":"Operator","value":6},{"label":"Economist","value":4},{"label":"User","value":8},{"label":"Regulator","value":6},{"label":"Hostel Warden","value":5},{"label":"Critic","value":4}]},"charts":[{"type":"line","title":"Modelled break-even path","unit":"INR k","note":"At eight deliveries per route from month four onward.","data":[{"label":"M1","value":-92},{"label":"M2","value":-74},{"label":"M3","value":-41},{"label":"M4","value":-12},{"label":"M5","value":18},{"label":"M6","value":47}]}]}}},{"id":"ev_c","createdAt":1785750383405,"idea":"A skill exchange where people trade expertise by the hour instead of paying each other.","verdict":"Caution","score":6,"panelSize":5,"domains":["social"],"attachmentCount":0,"result":{"idea":"A tiffin subscription for college students in Pune — home-style meals on monthly plans, with routes decided by a demand model rather than a fixed weekly menu.","detected_domains":["food","business","logistics"],"elapsed_seconds":11.4,"attachments":[{"name":"unit-economics.csv","bytes":4820,"included":true,"truncated":false},{"name":"pitch-deck.key","bytes":2400000,"included":false,"error":"Unsupported file type — upload a PDF, CSV, spreadsheet, or text file"}],"selected_experts":[],"personas":[{"key":"operator","name":"The Operator","role":"Operations / Logistics Expert","icon":"layers","color":"#c97a4a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"The kitchen works; the last mile is where this dies.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"bar","title":"Cost per delivered meal by route density","unit":"INR","note":"Assumes a 4km radius and one rider per route.","data":[{"label":"2 per route","value":71},{"label":"4 per route","value":44},{"label":"6 per route","value":31},{"label":"8 per route","value":24}]}}},{"key":"economist","name":"The Economist","role":"Financial Analyst / CFO","icon":"wallet","color":"#7c7fd4","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"At ₹90 a meal the contribution margin is negative until batch density triples.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"split","title":"Where each ₹90 goes today","unit":"INR","note":"Excludes founder salary and any marketing spend.","data":[{"label":"Ingredients","value":38},{"label":"Delivery","value":29},{"label":"Kitchen labour","value":16},{"label":"Packaging","value":8},{"label":"Margin","value":9}]}}},{"key":"user","name":"The User","role":"Target Customer","icon":"user","color":"#4fa36b","custom":false,"analysis":{"verdict":"Bullish","score":8,"headline":"I would pay for this the week I moved into the hostel.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"regulator","name":"The Regulator","role":"Legal / Compliance Expert","icon":"scales","color":"#c76b7a","custom":false,"analysis":{"verdict":"Cautious","score":6,"headline":"FSSAI is navigable, but not on the timeline in this plan.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease.","chart":{"type":"line","title":"Realistic subscriber ramp, first six months","unit":"","note":"Assumes launch is gated on FSSAI clearance in month two.","data":[{"label":"M1","value":0},{"label":"M2","value":20},{"label":"M3","value":85},{"label":"M4","value":150},{"label":"M5","value":210},{"label":"M6","value":265}]}}},{"key":"custom_the_hostel_warden","name":"The Hostel Warden","role":"Campus Operations Lead","icon":"shield","color":"#4ba3a0","custom":true,"analysis":{"verdict":"Cautious","score":5,"headline":"Nobody has asked whether the hostels will let you through the gate.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}},{"key":"critic","name":"The Critic","role":"Devil's Advocate","icon":"flame","color":"#c0523f","custom":false,"analysis":{"verdict":"Bearish","score":4,"headline":"Three of these already died in Pune and the plan repeats their mistake.","strengths":["Recurring revenue is predictable enough to forecast kitchen capacity a month out.","Student density around Kothrud means delivery radius stays under four kilometres."],"concerns":["Gross margin on a ₹90 meal collapses if delivery is not batched.","Churn spikes hard across semester breaks and nobody models for it.","FSSAI registration for a cloud kitchen takes longer than the launch plan assumes."],"recommendation":"Run one hostel block for six weeks before signing a second kitchen lease."}}],"synthesis":{"overall_score":5.5,"verdict":"Caution","executive_summary":"Real demand, real margin problem. Students want this and would pay, but the unit economics only work at a delivery density the plan does not explain how to reach. The operational and legal timelines are also longer than budgeted.","consensus_points":["The pain point is genuine and students articulate it unprompted.","Batch density, not menu quality, decides whether this survives.","The launch timeline underestimates food-safety registration."],"disagreements":[{"topic":"Whether the margin problem is fatal or solvable","sides":{"The Economist":"Negative contribution margin at current pricing is structural, not a scale problem.","The Operator":"Margin turns positive at eight deliveries per route; that is reachable in one hostel cluster."},"resolution":"Both are right at different densities. Prove eight-per-route in a single cluster before raising on the model."},{"topic":"Whether the demand model is a differentiator","sides":"The User and The Operator see it as invisible plumbing; The Critic argues it is complexity added before product-market fit is proven.","resolution":"Ship a fixed menu first. Add routing once you have four weeks of real order data to route on."}],"strengths":["Subscription revenue that can be forecast against kitchen capacity.","A user who describes the problem in their own words without prompting."],"weaknesses":["Contribution margin is negative below eight deliveries per route.","Semester breaks create churn the plan does not account for."],"opportunities":["Hostel-level bulk contracts remove the last-mile problem entirely.","Menu data becomes a supply-planning asset within two semesters."],"threats":["Incumbent aggregators can undercut on delivery for as long as it takes.","A single food-safety incident ends the business."],"action_plan_7_days":["Interview twenty students across three hostels about their current meal spend.","Rebuild the unit economics with delivery cost as a variable, not a constant.","Start the FSSAI registration; it gates everything downstream."],"action_plan_30_days":["Run one hostel block with a fixed menu and measure deliveries per route.","Sign a letter of intent with one hostel administration.","Decide on the demand model only after four weeks of real order data."],"final_recommendation":"Do not raise money on this yet. The demand is real enough to justify six weeks of work, but the margin story is unproven and the panel splits precisely on whether density is reachable. Run a single hostel block, measure deliveries per route, and let that number decide whether this is a business or an expensive way to feed people.","consensus_percentage":52,"agent_scores":{"The Operator":6,"The Economist":4,"The User":8,"The Regulator":6,"The Hostel Warden":5,"The Critic":4},"failed_agents":[],"score_chart":{"type":"bar","title":"How each expert scored it","unit":"/10","note":"","measured":true,"data":[{"label":"Operator","value":6},{"label":"Economist","value":4},{"label":"User","value":8},{"label":"Regulator","value":6},{"label":"Hostel Warden","value":5},{"label":"Critic","value":4}]},"charts":[{"type":"line","title":"Modelled break-even path","unit":"INR k","note":"At eight deliveries per route from month four onward.","data":[{"label":"M1","value":-92},{"label":"M2","value":-74},{"label":"M3","value":-41},{"label":"M4","value":-12},{"label":"M5","value":18},{"label":"M6","value":47}]}]}}}]
+[
+  {
+    "id": "ev_sample_tiffin",
+    "createdAt": 1786011840000,
+    "idea": "A tiffin subscription for college students in Pune — home-style meals on monthly plans, with delivery routes decided by a demand model rather than a fixed weekly menu. Two central kitchens, hostel-gate handover, and a pause-anytime plan for students who travel home.",
+    "verdict": "Caution",
+    "score": 5.5,
+    "panelSize": 6,
+    "domains": ["food", "business", "logistics"],
+    "attachmentCount": 1,
+    "brief": {
+      "context": "Five months live in two hostel clusters. 229 active subscribers, ₹12.1L gross in November, run by two founders and four kitchen staff. ₹18L of runway left and no outside funding yet. We have already tried a fixed weekly menu and churned 30% of subscribers in month two.",
+      "criteria": "Hold contribution margin above 22% per meal while reaching 600 subscribers within nine months, with monthly churn under 8% and no food-safety incident.",
+      "constraints": "FSSAI licensing on both kitchens, a ₹40 ceiling on food cost per meal, no more than six staff before Series A, and delivery confined to a 6 km radius of each kitchen.",
+      "sourceNames": ["unit-economics.csv"],
+      "completed": 5,
+      "total": 5,
+      "requiredMet": true
+    },
+    "result": {
+      "idea": "A tiffin subscription for college students in Pune — home-style meals on monthly plans, with delivery routes decided by a demand model rather than a fixed weekly menu. Two central kitchens, hostel-gate handover, and a pause-anytime plan for students who travel home.",
+      "detected_domains": ["food", "business", "logistics"],
+      "elapsed_seconds": 11.4,
+      "attachments": [
+        { "name": "unit-economics.csv", "bytes": 4820, "included": true, "truncated": false },
+        {
+          "name": "pitch-deck.key",
+          "bytes": 2400000,
+          "included": false,
+          "error": "Unsupported file type — upload a PDF, CSV, spreadsheet, or text file"
+        }
+      ],
+      "selected_experts": [
+        { "name": "The Operator", "icon": "layers", "role": "Operations / Logistics Expert", "color": "#c97a4a" },
+        { "name": "The Economist", "icon": "wallet", "role": "Financial Analyst / CFO", "color": "#7c7fd4" },
+        { "name": "The User", "icon": "user", "role": "Target Customer", "color": "#4fa36b" },
+        { "name": "The Regulator", "icon": "scales", "role": "Legal / Compliance Expert", "color": "#c76b7a" },
+        { "name": "The Hostel Warden", "icon": "route", "role": "Campus Operations Lead", "color": "#b08d57" },
+        { "name": "The Critic", "icon": "flame", "role": "Devil's Advocate", "color": "#c0523f" }
+      ],
+      "personas": [
+        {
+          "key": "operator",
+          "name": "The Operator",
+          "role": "Operations / Logistics Expert",
+          "icon": "layers",
+          "color": "#c97a4a",
+          "custom": false,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 6,
+            "headline": "The demand model is the right instinct, but two kitchens serving a 6 km radius caps you well short of 600 subscribers.",
+            "strengths": [
+              "Hostel-gate handover removes the last-mile failure that kills most tiffin operations.",
+              "A demand-routed menu cuts prep waste, which is where margin usually leaks first.",
+              "Pause-anytime matches the real rhythm of a student calendar instead of fighting it."
+            ],
+            "concerns": [
+              "At 20,000 meals a month you are already near the practical ceiling of two kitchens with six staff.",
+              "Lunch and dinner both peak inside a 90-minute window — the same riders cannot cover both.",
+              "No named cold-chain or holding process for the gap between cook-off and handover."
+            ],
+            "recommendation": "Map the actual meals-per-rider-hour you achieve in the tighter cluster before adding a single subscriber to the looser one.",
+            "chart": {
+              "type": "bar",
+              "title": "Meals per rider-hour by cluster",
+              "unit": "meals",
+              "note": "Operator's estimate from comparable hostel-gate routes, not measured on your fleet.",
+              "data": [
+                { "label": "Cluster A (dense)", "value": 14 },
+                { "label": "Cluster B (spread)", "value": 8 },
+                { "label": "Break-even needed", "value": 12 }
+              ]
+            }
+          }
+        },
+        {
+          "key": "economist",
+          "name": "The Economist",
+          "role": "Financial Analyst / CFO",
+          "icon": "wallet",
+          "color": "#7c7fd4",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bearish",
+            "score": 4,
+            "headline": "Your own spreadsheet shows delivery cost rising faster than revenue per meal — the 22% margin target is not reachable on this cost base.",
+            "strengths": [
+              "Monthly prepayment gives you working capital ahead of food spend.",
+              "Revenue per subscriber has held steady while volume grew, so pricing is not the problem.",
+              "₹18L of runway is enough to test a fix, if you spend it on density rather than growth."
+            ],
+            "concerns": [
+              "Delivery cost per meal moved from ₹9.25 to ₹9.60 across the five months in the file — the wrong direction at scale.",
+              "Food cost at ₹29.8 per meal leaves ₹10 of headroom against your own ₹40 ceiling, before any wastage.",
+              "Six-staff cap plus 600 subscribers implies a labour cost per meal you have not modelled."
+            ],
+            "recommendation": "Rebuild the model with delivery cost as a function of drop density, not subscriber count, and re-derive the subscriber target from there.",
+            "chart": {
+              "type": "line",
+              "title": "Delivery cost per meal",
+              "unit": "₹",
+              "note": "Read directly from unit-economics.csv.",
+              "data": [
+                { "label": "Jul", "value": 9.25 },
+                { "label": "Aug", "value": 8.78 },
+                { "label": "Sep", "value": 8.98 },
+                { "label": "Oct", "value": 9.37 },
+                { "label": "Nov", "value": 9.61 }
+              ]
+            }
+          }
+        },
+        {
+          "key": "user",
+          "name": "The User",
+          "role": "Target Customer",
+          "icon": "user",
+          "color": "#4fa36b",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bullish",
+            "score": 8,
+            "headline": "I would pay for this tomorrow — mess food is the single worst part of hostel life and nobody has fixed it.",
+            "strengths": [
+              "Pause-anytime is the feature that decides it; every other plan punishes me for going home.",
+              "Home-style rather than restaurant food is exactly what I miss by week three.",
+              "Handover at the gate means I do not have to explain my location to a rider every day."
+            ],
+            "concerns": [
+              "If the menu changes by demand model, I cannot tell what I am eating on Thursday, and that matters more than you think.",
+              "One late dinner during exam week and I will cancel — there is no goodwill to spend.",
+              "Monthly prepayment is a real ask on a student budget; weekly would convert more of my friends."
+            ],
+            "recommendation": "Publish tomorrow's menu by 6pm the night before, even if the routing stays dynamic underneath."
+          }
+        },
+        {
+          "key": "regulator",
+          "name": "The Regulator",
+          "role": "Legal / Compliance Expert",
+          "icon": "scales",
+          "color": "#c76b7a",
+          "custom": false,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 6,
+            "headline": "FSSAI registration on the kitchens is the easy half; the transport and holding-temperature obligations are the half that closes operations.",
+            "strengths": [
+              "Central kitchens are far easier to license and inspect than a home-cook network.",
+              "Serving students rather than institutions keeps you out of contract-catering tender rules.",
+              "No alcohol, no meat processing, no imports — the licensing surface is genuinely small."
+            ],
+            "concerns": [
+              "Hot food held above four hours without documented temperature control is a shutdown risk, not a fine.",
+              "Riders handling food need their own hygiene documentation, whether they are employees or not.",
+              "One food-borne illness cluster in a hostel becomes a district health matter within a day."
+            ],
+            "recommendation": "Put a written temperature and holding-time log into the daily route sheet this week, before you need it to prove anything."
+          }
+        },
+        {
+          "key": "custom_the_hostel_warden",
+          "name": "The Hostel Warden",
+          "role": "Campus Operations Lead",
+          "icon": "route",
+          "color": "#b08d57",
+          "custom": true,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 5,
+            "headline": "Gate handover works only while the gate lets you in — and that permission is mine, not the students'.",
+            "strengths": [
+              "A single scheduled drop is far less disruptive than forty individual delivery riders.",
+              "Fewer students leaving campus at night for food is something I actively want.",
+              "A named vendor I can hold responsible beats an app I cannot call."
+            ],
+            "concerns": [
+              "Existing mess contracts often carry exclusivity clauses that no student has read.",
+              "Deliveries after gate-closing hours will not happen, whatever your model says.",
+              "If waste containers pile up at the gate, I will end the arrangement before I email you."
+            ],
+            "recommendation": "Get a written slot from each hostel administration before you sell a single subscription in that cluster."
+          }
+        },
+        {
+          "key": "critic",
+          "name": "The Critic",
+          "role": "Devil's Advocate",
+          "icon": "flame",
+          "color": "#c0523f",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bearish",
+            "score": 4,
+            "headline": "You already ran this experiment: the fixed menu churned 30% and the dynamic menu has not been shown to fix retention, only waste.",
+            "strengths": [
+              "You have five months of real data, which is more than most operators at this stage.",
+              "The founders are close enough to operations to see failures the same day.",
+              "The market is not in doubt — demand is the one thing nobody on this panel disputes."
+            ],
+            "concerns": [
+              "The demand model solves a kitchen problem and is being sold as a retention feature.",
+              "229 subscribers after five months implies roughly 30 net additions a month; 600 in nine is not an extrapolation, it is a hope.",
+              "Two founders, four staff, two kitchens and a hard staffing cap means every growth plan runs through the same two people."
+            ],
+            "recommendation": "State plainly what caused the 30% churn, and prove the new menu logic touches that cause — otherwise you are scaling the same leak."
+          }
+        }
+      ],
+      "synthesis": {
+        "overall_score": 5.5,
+        "verdict": "Caution",
+        "executive_summary": "Real demand, real margin problem. Students want this and would pay, but your own numbers show delivery cost per meal rising as you grow, and the 600-subscriber target sits beyond what two kitchens, six staff and a 6 km radius can serve. The panel does not doubt the market; it doubts this cost base reaching 22% contribution.",
+        "consensus_points": [
+          "Demand among hostel students is genuine and is not the risk in this business.",
+          "Density, not subscriber count, is the variable that decides whether the margin target is reachable.",
+          "Pause-anytime and gate handover are the two features that make the product work operationally.",
+          "The 600-in-nine-months target is not supported by the growth rate in the data provided."
+        ],
+        "disagreements": [
+          {
+            "topic": "Whether the demand-routed menu helps retention or only waste",
+            "sides": {
+              "The Operator": "It cuts prep waste measurably and that alone justifies it.",
+              "The User": "An unpredictable menu is a reason to cancel, not to stay.",
+              "The Critic": "It is a kitchen optimisation being marketed as a retention fix."
+            },
+            "resolution": "Keep the dynamic routing but remove the unpredictability the customer sees: lock and publish the next day's menu by 6pm. Waste savings survive; the churn risk does not."
+          },
+          {
+            "topic": "Whether to grow subscribers or tighten the existing clusters first",
+            "sides": {
+              "The Economist": "Every new loose-cluster subscriber makes the delivery cost curve worse.",
+              "The Hostel Warden": "Growth is gated by hostel permissions you do not have yet anyway.",
+              "The Operator": "Density inside one cluster is the only growth that improves the model."
+            },
+            "resolution": "Freeze expansion into new clusters for one quarter and drive penetration inside the dense cluster until meals per rider-hour clears twelve."
+          }
+        ],
+        "strengths": [
+          "Demonstrated willingness to pay from the target customer, with five months of retention data behind it.",
+          "Prepaid monthly plans fund food cost ahead of spend.",
+          "Gate handover removes the most common last-mile failure in food delivery."
+        ],
+        "weaknesses": [
+          "Delivery cost per meal is rising rather than falling with volume.",
+          "Two kitchens and a six-staff cap put a hard ceiling under the stated growth target.",
+          "No documented temperature or holding-time control between cook-off and handover."
+        ],
+        "opportunities": [
+          "Hostel administrations want fewer late-night campus exits and can be turned into distribution partners.",
+          "Exam-week and travel-week demand patterns are predictable enough to price separately.",
+          "A single dense cluster proven at 22% margin becomes a repeatable template for the next campus."
+        ],
+        "threats": [
+          "An exclusivity clause in an existing mess contract could close a cluster overnight.",
+          "One food-borne illness cluster becomes a district health matter and an existential brand event.",
+          "A funded aggregator entering hostel catering would out-spend you on rider density immediately."
+        ],
+        "action_plan_7_days": [
+          "Instrument meals per rider-hour separately for each cluster and publish the number internally.",
+          "Add a temperature and holding-time log to the daily route sheet.",
+          "Start publishing the next day's menu by 6pm and measure the churn cohort against it."
+        ],
+        "action_plan_30_days": [
+          "Rebuild the unit model with delivery cost as a function of drop density and re-derive the subscriber target.",
+          "Secure a written delivery slot from each hostel administration in the dense cluster.",
+          "Run a weekly-payment option against monthly on one hostel and compare conversion.",
+          "Write down the cause of the earlier 30% churn and test whether the current product touches it."
+        ],
+        "final_recommendation": "Do not scale this yet. Spend the next quarter converting one cluster into proof: density above twelve meals per rider-hour, churn under 8%, contribution margin at 22% with the temperature log in place. If that cluster holds, the model is repeatable and worth funding. If it does not, no number of new subscribers will fix it — they will only make the delivery curve steeper.",
+        "consensus_percentage": 68,
+        "agent_scores": {
+          "The Operator": 6,
+          "The Economist": 4,
+          "The User": 8,
+          "The Regulator": 6,
+          "The Hostel Warden": 5,
+          "The Critic": 4
+        },
+        "failed_agents": [],
+        "score_chart": {
+          "type": "bar",
+          "title": "Score by expert",
+          "unit": "/10",
+          "note": "Built from the panel's actual scores.",
+          "measured": true,
+          "data": [
+            { "label": "The User", "value": 8 },
+            { "label": "The Operator", "value": 6 },
+            { "label": "The Regulator", "value": 6 },
+            { "label": "The Hostel Warden", "value": 5 },
+            { "label": "The Economist", "value": 4 },
+            { "label": "The Critic", "value": 4 }
+          ]
+        },
+        "charts": [
+          {
+            "type": "split",
+            "title": "Where a ₹60 meal goes today",
+            "unit": "₹",
+            "note": "Derived from November figures in unit-economics.csv.",
+            "data": [
+              { "label": "Food cost", "value": 29.8 },
+              { "label": "Delivery", "value": 9.6 },
+              { "label": "Kitchen labour", "value": 11.2 },
+              { "label": "Contribution", "value": 9.4 }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ev_sample_discharge",
+    "createdAt": 1786093500000,
+    "idea": "A discharge follow-up service for district hospitals: every patient sent home after an inpatient stay gets three scheduled phone check-ins by a trained health worker, with escalation to the treating unit when answers cross a risk threshold.",
+    "verdict": "Go",
+    "score": 7,
+    "panelSize": 7,
+    "domains": ["health", "social", "tech"],
+    "attachmentCount": 2,
+    "brief": {
+      "context": "Piloted in one 240-bed district hospital for four months with two health workers covering 60 discharges a week. Funded by a state grant that expires in eleven months. Readmission within 30 days is currently 14% and the hospital has no follow-up process at all today.",
+      "criteria": "Cut 30-day readmissions by at least three percentage points across two hospitals while keeping cost per followed-up patient under ₹120, and reach 80% of discharges within 72 hours.",
+      "constraints": "No patient data may leave the hospital network, health workers are hospital employees rather than ours, and any clinical escalation must go to the treating unit rather than a call centre.",
+      "sourceNames": ["pilot-readmissions.csv", "escalation-protocol.pdf"],
+      "completed": 5,
+      "total": 5,
+      "requiredMet": true
+    },
+    "result": {
+      "idea": "A discharge follow-up service for district hospitals: every patient sent home after an inpatient stay gets three scheduled phone check-ins by a trained health worker, with escalation to the treating unit when answers cross a risk threshold.",
+      "detected_domains": ["health", "social", "tech"],
+      "elapsed_seconds": 13.1,
+      "attachments": [
+        { "name": "pilot-readmissions.csv", "bytes": 7310, "included": true, "truncated": false },
+        { "name": "escalation-protocol.pdf", "bytes": 184000, "included": true, "truncated": true }
+      ],
+      "selected_experts": [
+        { "name": "The Ward Nurse", "icon": "pulse", "role": "Inpatient Care Lead", "color": "#4ba3a0" },
+        { "name": "The District Health Authority", "icon": "shield", "role": "Public Health Regulator", "color": "#c76b7a" },
+        { "name": "The Researcher", "icon": "beaker", "role": "Domain Expert / Scientist", "color": "#4ba3a0" },
+        { "name": "The Impact Analyst", "icon": "globe", "role": "Social Impact / Sustainability", "color": "#4fa36b" },
+        { "name": "The User", "icon": "user", "role": "Target Customer", "color": "#4fa36b" },
+        { "name": "The Engineer", "icon": "wrench", "role": "CTO / Tech Architect", "color": "#5b9bd5" },
+        { "name": "The Critic", "icon": "flame", "role": "Devil's Advocate", "color": "#c0523f" }
+      ],
+      "personas": [
+        {
+          "key": "custom_the_ward_nurse",
+          "name": "The Ward Nurse",
+          "role": "Inpatient Care Lead",
+          "icon": "pulse",
+          "color": "#4ba3a0",
+          "custom": true,
+          "analysis": {
+            "verdict": "Bullish",
+            "score": 7,
+            "headline": "Every readmission I see was visible on day three at home, and nobody was listening on day three.",
+            "strengths": [
+              "Three calls in the first fortnight lands exactly where deterioration actually shows up.",
+              "Escalation into the treating unit keeps clinical judgement with the people who know the patient.",
+              "Health workers can ask about medicines and wound sites in a way a form cannot."
+            ],
+            "concerns": [
+              "The unit taking escalations has no protected time for them; it will land on whoever is on shift.",
+              "A risk threshold set too low will flood us with calls and be ignored inside a month.",
+              "Patients under-report pain on the phone, especially to someone they have never met."
+            ],
+            "recommendation": "Name a specific duty slot in the treating unit that owns escalations, before you widen the pilot."
+          }
+        },
+        {
+          "key": "custom_the_district_health_authority",
+          "name": "The District Health Authority",
+          "role": "Public Health Regulator",
+          "icon": "shield",
+          "color": "#c76b7a",
+          "custom": true,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 6,
+            "headline": "This is the kind of programme I can fund at district scale, provided the data never leaves the hospital and the escalation path is written down.",
+            "strengths": [
+              "Uses existing hospital staff rather than creating a parallel workforce.",
+              "Readmission rate is a metric the district already reports, so success is legible without new instruments.",
+              "Keeping data inside the hospital network avoids the consent problem that stops most digital health pilots."
+            ],
+            "concerns": [
+              "Phone follow-up records are clinical records; retention and access rules apply whether you built for them or not.",
+              "A grant-funded service that stops when the grant stops damages trust more than never starting.",
+              "Health workers taking clinical questions without a defined scope is a liability question, not a training one."
+            ],
+            "recommendation": "Publish a written scope of practice for the health workers and a records-retention rule before the second hospital joins."
+          }
+        },
+        {
+          "key": "researcher",
+          "name": "The Researcher",
+          "role": "Domain Expert / Scientist",
+          "icon": "beaker",
+          "color": "#4ba3a0",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bullish",
+            "score": 8,
+            "headline": "Structured post-discharge contact is one of the better-evidenced interventions in this space; your pilot numbers are consistent with the literature.",
+            "strengths": [
+              "The 14% baseline is measured in your own setting rather than borrowed from a paper.",
+              "Three contacts is the dose most trials that showed an effect actually used.",
+              "A phone-based design is reproducible across districts without new infrastructure."
+            ],
+            "concerns": [
+              "Four months and 60 discharges a week is not enough to separate a real effect from seasonal variation.",
+              "Without a comparison arm you cannot attribute any readmission drop to the calls.",
+              "Selection creeps in fast — the patients who answer the phone are not the patients most at risk."
+            ],
+            "recommendation": "Stagger the rollout across wards so the un-started wards act as a comparison group instead of running an uncontrolled pilot.",
+            "chart": {
+              "type": "bar",
+              "title": "30-day readmission by follow-up completeness",
+              "unit": "%",
+              "note": "From pilot-readmissions.csv; observational, not a controlled comparison.",
+              "data": [
+                { "label": "All three calls", "value": 9.2 },
+                { "label": "One or two calls", "value": 12.8 },
+                { "label": "Not reached", "value": 15.6 }
+              ]
+            }
+          }
+        },
+        {
+          "key": "impact",
+          "name": "The Impact Analyst",
+          "role": "Social Impact / Sustainability",
+          "icon": "globe",
+          "color": "#4fa36b",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bullish",
+            "score": 8,
+            "headline": "The benefit lands on exactly the patients who currently get nothing after the gate, and the cost per patient is low enough to survive public funding.",
+            "strengths": [
+              "Replaces an absence rather than displacing an existing service.",
+              "₹120 per followed-up patient is defensible against the cost of a single readmitted bed-day.",
+              "Health workers gain a transferable skill that stays in the district."
+            ],
+            "concerns": [
+              "Patients without a working phone are the poorest and will be systematically missed.",
+              "Three calls per discharge added to an existing workload can quietly become unpaid overtime.",
+              "Measuring only readmissions will hide harms that do not end in a hospital bed."
+            ],
+            "recommendation": "Track reach by patient income band from the start, so the programme cannot improve the average while missing the poorest."
+          }
+        },
+        {
+          "key": "user",
+          "name": "The User",
+          "role": "Target Customer",
+          "icon": "user",
+          "color": "#4fa36b",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bullish",
+            "score": 8,
+            "headline": "I was sent home with a sheet of paper and no idea what counted as normal — a phone call from the hospital would have changed that week.",
+            "strengths": [
+              "Someone from the hospital calling me means I do not have to decide alone whether this is serious.",
+              "I would rather answer questions than travel four hours back to the outpatient queue.",
+              "Knowing a call is coming makes me pay attention to my own symptoms."
+            ],
+            "concerns": [
+              "If the caller cannot answer a medicine question, the call makes me more anxious, not less.",
+              "Unknown numbers get ignored in my house; I will not answer a call I was not told about.",
+              "I do not want my neighbours to learn my diagnosis from a loudspeaker phone call."
+            ],
+            "recommendation": "Tell me the calling number and the schedule before I leave the ward, in writing."
+          }
+        },
+        {
+          "key": "engineer",
+          "name": "The Engineer",
+          "role": "CTO / Tech Architect",
+          "icon": "wrench",
+          "color": "#5b9bd5",
+          "custom": false,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 7,
+            "headline": "Technically this is a scheduler, a questionnaire and an escalation queue — the hard constraint is that none of it may leave the hospital network.",
+            "strengths": [
+              "No wearables, no app adoption, no patient-side software to support.",
+              "The whole workflow fits inside a single on-premise service with a small database.",
+              "Escalation as a queue with an owner is a well-understood pattern to build and audit."
+            ],
+            "concerns": [
+              "On-premise deployment across districts means version drift and no central visibility unless you plan for it now.",
+              "Data-residency rules out most managed telephony, which is the part you would rather not build.",
+              "Risk thresholds encoded in application logic will need clinical sign-off on every change."
+            ],
+            "recommendation": "Keep the risk threshold in a reviewable configuration file with a clinician's sign-off recorded against each version.",
+            "chart": {
+              "type": "split",
+              "title": "Where the build effort sits",
+              "unit": "weeks",
+              "note": "Engineer's estimate for a two-hospital deployment.",
+              "data": [
+                { "label": "Scheduling and call flow", "value": 4 },
+                { "label": "Escalation queue", "value": 3 },
+                { "label": "On-premise deployment", "value": 5 },
+                { "label": "Reporting", "value": 2 }
+              ]
+            }
+          }
+        },
+        {
+          "key": "critic",
+          "name": "The Critic",
+          "role": "Devil's Advocate",
+          "icon": "flame",
+          "color": "#c0523f",
+          "custom": false,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 6,
+            "headline": "The readmission numbers you are proud of are the numbers of patients who answered their phone — that is a selection effect wearing an outcome's clothes.",
+            "strengths": [
+              "The intervention is cheap enough that being wrong is survivable.",
+              "It creates no new patient-side dependency that would be cruel to withdraw.",
+              "The panel's clinical and regulatory seats both want it, which is rare."
+            ],
+            "concerns": [
+              "Patients reached three times are healthier, better resourced and easier to reach by construction.",
+              "The grant expires in eleven months and no one on this panel has named who pays in month twelve.",
+              "Escalation without protected clinical time becomes a queue nobody empties, and then the calls are theatre."
+            ],
+            "recommendation": "Before claiming a readmission effect, report the outcome for everyone discharged — including those you never reached."
+          }
+        }
+      ],
+      "synthesis": {
+        "overall_score": 7,
+        "verdict": "Go",
+        "executive_summary": "The panel agrees this should proceed and disagrees only about what would count as proof. The intervention is cheap, evidence-backed, wanted by both the ward and the district, and replaces nothing. Two things are missing before it scales: a comparison group so the readmission claim survives scrutiny, and a named owner of clinical escalations with protected time.",
+        "consensus_points": [
+          "Post-discharge follow-up addresses a real gap and no expert argued against doing it.",
+          "Escalation must land on a named duty slot in the treating unit, not on whoever answers.",
+          "Cost per followed-up patient is low enough to be publicly funded beyond the grant.",
+          "Reach must be measured separately from outcome, or the poorest patients disappear from the numbers."
+        ],
+        "disagreements": [
+          {
+            "topic": "Whether the pilot's readmission drop can be attributed to the calls",
+            "sides": {
+              "The Researcher": "Not without a comparison arm — stagger the rollout and you get one for free.",
+              "The Impact Analyst": "The effect size is plausible and the intervention is too cheap to withhold from a ward for methodology.",
+              "The Critic": "As reported it is a selection effect: reachable patients are healthier patients."
+            },
+            "resolution": "Stagger by ward rather than withholding from anyone: every ward joins within the quarter, in a randomised order, which yields a comparison group without denying care."
+          },
+          {
+            "topic": "Who owns the escalation once a call crosses the risk threshold",
+            "sides": {
+              "The Ward Nurse": "It has to be the treating unit, but the unit has no protected time for it.",
+              "The District Health Authority": "Whoever owns it needs a written scope of practice or it is a liability.",
+              "The Engineer": "Whatever you choose, the threshold has to be configurable and clinically signed off."
+            },
+            "resolution": "Name a daily duty slot in the treating unit as the escalation owner, publish the scope of practice for health workers, and keep the threshold in a versioned config with a clinician's sign-off."
+          }
+        ],
+        "strengths": [
+          "Addresses a documented gap with a well-evidenced, low-cost intervention.",
+          "Uses existing hospital staff and existing reported metrics, so it needs no new infrastructure.",
+          "Both the clinical and regulatory seats on the panel actively want the programme."
+        ],
+        "weaknesses": [
+          "Four months of uncontrolled pilot data cannot support a causal claim.",
+          "Escalation has no owner with protected time.",
+          "Patients without a reliable phone are systematically excluded."
+        ],
+        "opportunities": [
+          "A staggered rollout produces publishable district-level evidence at no extra cost.",
+          "Health workers gain a durable skill that stays inside the district health system.",
+          "Success on a metric the district already reports makes the post-grant funding case straightforward."
+        ],
+        "threats": [
+          "Grant expiry in eleven months with no named successor funder.",
+          "Clinical records obligations applying retroactively to call notes.",
+          "An ignored escalation queue turning a safety mechanism into documented negligence."
+        ],
+        "action_plan_7_days": [
+          "Name the daily escalation duty slot in the treating unit and put it on the roster.",
+          "Write the health workers' scope of practice and have the treating unit sign it.",
+          "Give every discharged patient the calling number and call schedule in writing."
+        ],
+        "action_plan_30_days": [
+          "Randomise the order in which remaining wards join and record the schedule before starting.",
+          "Report readmissions for all discharges, split by how many calls were completed.",
+          "Add income band and phone availability to the reach report.",
+          "Move the risk threshold into a versioned configuration file with clinical sign-off."
+        ],
+        "final_recommendation": "Proceed, and spend the next quarter making the evidence defensible rather than making the programme bigger. Stagger the ward rollout so you finish with a comparison group, name the escalation owner this week, and report reach beside outcome. Do that and the eleven-month grant ends with a district-scale case that funds itself; skip it and you will have a well-liked programme that cannot prove it worked.",
+        "consensus_percentage": 84,
+        "agent_scores": {
+          "The Ward Nurse": 7,
+          "The District Health Authority": 6,
+          "The Researcher": 8,
+          "The Impact Analyst": 8,
+          "The User": 8,
+          "The Engineer": 7,
+          "The Critic": 6
+        },
+        "failed_agents": [],
+        "score_chart": {
+          "type": "bar",
+          "title": "Score by expert",
+          "unit": "/10",
+          "note": "Built from the panel's actual scores.",
+          "measured": true,
+          "data": [
+            { "label": "The Researcher", "value": 8 },
+            { "label": "The Impact Analyst", "value": 8 },
+            { "label": "The User", "value": 8 },
+            { "label": "The Ward Nurse", "value": 7 },
+            { "label": "The Engineer", "value": 7 },
+            { "label": "The District Health Authority", "value": 6 },
+            { "label": "The Critic", "value": 6 }
+          ]
+        },
+        "charts": []
+      }
+    }
+  },
+  {
+    "id": "ev_sample_screening",
+    "createdAt": 1786176720000,
+    "idea": "Résumé screening for HR teams under twenty people, built to strip identity signals — name, photograph, college, address — before ranking candidates against the job description.",
+    "verdict": "No-Go",
+    "score": 3,
+    "panelSize": 7,
+    "domains": ["ai", "business", "tech"],
+    "attachmentCount": 0,
+    "brief": {
+      "context": "Pre-launch. Two engineers, no HR background on the team, a working prototype ranking against job descriptions with an internal test set of 400 résumés. Intending to sell at ₹4,000 per month per company.",
+      "criteria": "Twenty paying companies within six months, with ranking that a customer's own hiring manager agrees with at least 70% of the time.",
+      "constraints": "",
+      "sourceNames": [],
+      "completed": 3,
+      "total": 5,
+      "requiredMet": true
+    },
+    "result": {
+      "idea": "Résumé screening for HR teams under twenty people, built to strip identity signals — name, photograph, college, address — before ranking candidates against the job description.",
+      "detected_domains": ["ai", "business", "tech"],
+      "elapsed_seconds": 12.6,
+      "attachments": [],
+      "selected_experts": [
+        { "name": "The Regulator", "icon": "scales", "role": "Legal / Compliance Expert", "color": "#c76b7a" },
+        { "name": "The Employment Lawyer", "icon": "shield", "role": "Labour Law Counsel", "color": "#c97a4a" },
+        { "name": "The Investor", "icon": "target", "role": "VC / Angel Investor", "color": "#d4a017" },
+        { "name": "The Designer", "icon": "palette", "role": "Product Designer / UX Expert", "color": "#b8709d" },
+        { "name": "The Engineer", "icon": "wrench", "role": "CTO / Tech Architect", "color": "#5b9bd5" },
+        { "name": "The Researcher", "icon": "beaker", "role": "Domain Expert / Scientist", "color": "#4ba3a0" },
+        { "name": "The Critic", "icon": "flame", "role": "Devil's Advocate", "color": "#c0523f" }
+      ],
+      "personas": [
+        {
+          "key": "regulator",
+          "name": "The Regulator",
+          "role": "Legal / Compliance Expert",
+          "icon": "scales",
+          "color": "#c76b7a",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bearish",
+            "score": 3,
+            "headline": "Automated ranking of job applicants is squarely inside the highest-risk category of every AI rulebook now in force, and you have no compliance surface at all.",
+            "strengths": [
+              "Removing identity fields is a defensible design intent and will read well to a regulator.",
+              "Small-company customers face lighter reporting duties than enterprise HR platforms.",
+              "Screening assistance, framed as advisory rather than decisive, is a narrower legal target."
+            ],
+            "concerns": [
+              "Employment decision-support triggers documentation, explainability and audit obligations you have not scoped.",
+              "Stripping a name does not remove the proxies — employment gaps, postcodes in a work history, phrasing — so you cannot claim bias is gone.",
+              "Your customers inherit the liability and will demand indemnities a two-person company cannot give."
+            ],
+            "recommendation": "Do not sell into hiring decisions until you can produce a written bias assessment and an explanation for any individual ranking."
+          }
+        },
+        {
+          "key": "custom_the_employment_lawyer",
+          "name": "The Employment Lawyer",
+          "role": "Labour Law Counsel",
+          "icon": "shield",
+          "color": "#c97a4a",
+          "custom": true,
+          "analysis": {
+            "verdict": "Bearish",
+            "score": 3,
+            "headline": "The first rejected candidate who asks why will generate a disclosure request your product cannot answer.",
+            "strengths": [
+              "Anonymised screening is a recognised good-practice pattern and courts understand the intent.",
+              "Under-twenty-person employers rarely have the volume to attract systemic-discrimination claims.",
+              "A documented, consistent process is genuinely better than the ad-hoc judgement it replaces."
+            ],
+            "concerns": [
+              "A ranking is a decision aid in practice; asserting the human decided is not a defence if the human always follows the ranking.",
+              "You retain candidate data on behalf of the employer with no stated retention or deletion policy.",
+              "Disparate impact is measured on outcomes, not intentions — nobody on your team is measuring outcomes."
+            ],
+            "recommendation": "Build the per-candidate explanation and the outcome audit before the first sale, not after the first complaint."
+          }
+        },
+        {
+          "key": "investor",
+          "name": "The Investor",
+          "role": "VC / Angel Investor",
+          "icon": "target",
+          "color": "#d4a017",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bearish",
+            "score": 3,
+            "headline": "₹4,000 a month from companies that hire four times a year, in a category where the incumbent ATS ships this as a free checkbox — I'm out.",
+            "strengths": [
+              "Bias in hiring is a real and widely felt problem, so the pitch lands in the room.",
+              "A prototype already working against job descriptions is more than most pre-seed teams have.",
+              "Under-twenty HR teams are genuinely underserved by enterprise tooling."
+            ],
+            "concerns": [
+              "Under-twenty companies hire too rarely to feel the pain monthly, so churn will track hiring cycles.",
+              "Applicant tracking incumbents can add anonymised screening in a sprint and will, for free.",
+              "Twenty customers at ₹4,000 is ₹9.6L a year — not a business, and not a fundable wedge either."
+            ],
+            "recommendation": "Either move upmarket to companies with continuous hiring volume, or sell the audit rather than the ranking."
+          }
+        },
+        {
+          "key": "designer",
+          "name": "The Designer",
+          "role": "Product Designer / UX Expert",
+          "icon": "palette",
+          "color": "#b8709d",
+          "custom": false,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 5,
+            "headline": "A ranked list is the wrong interface for this problem — it invites the hiring manager to stop thinking at position five.",
+            "strengths": [
+              "Hiding identity fields at the interface level is a genuinely good design decision.",
+              "A single-purpose tool can be far clearer than the screening tab of an enterprise ATS.",
+              "The workflow is short enough to be learned without training."
+            ],
+            "concerns": [
+              "Ordered lists create anchoring; whatever is at the top is treated as correct.",
+              "Without a visible reason per candidate, the user cannot disagree with the tool, only obey or ignore it.",
+              "Nothing in the flow asks the hiring manager to record why they rejected someone, which is the artefact they will later need."
+            ],
+            "recommendation": "Replace the ranking with unordered shortlists grouped by the requirement each candidate meets, and require a recorded reason on rejection."
+          }
+        },
+        {
+          "key": "engineer",
+          "name": "The Engineer",
+          "role": "CTO / Tech Architect",
+          "icon": "wrench",
+          "color": "#5b9bd5",
+          "custom": false,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 5,
+            "headline": "Parsing and matching is a solved weekend problem; the explainability and audit trail you actually need is the six-month build nobody has scoped.",
+            "strengths": [
+              "Résumé parsing and job-description matching are well-trodden with mature libraries.",
+              "Field redaction before inference is straightforward and easy to verify.",
+              "400 test résumés is enough to build a regression suite against."
+            ],
+            "concerns": [
+              "A test set of 400 assembled by two engineers will not represent the label distribution of a real applicant pool.",
+              "Per-decision explanations and immutable audit logs are the majority of the work and are not started.",
+              "Candidate data storage with no retention policy is a breach waiting for a schedule."
+            ],
+            "recommendation": "Scope the audit log and per-candidate explanation as the core product, and treat the matcher as the easy part it is."
+          }
+        },
+        {
+          "key": "researcher",
+          "name": "The Researcher",
+          "role": "Domain Expert / Scientist",
+          "icon": "beaker",
+          "color": "#4ba3a0",
+          "custom": false,
+          "analysis": {
+            "verdict": "Cautious",
+            "score": 0,
+            "headline": "Provider returned 429 after three retries across Groq and NVIDIA.",
+            "strengths": [],
+            "concerns": [],
+            "recommendation": "",
+            "_failed": true
+          }
+        },
+        {
+          "key": "critic",
+          "name": "The Critic",
+          "role": "Devil's Advocate",
+          "icon": "flame",
+          "color": "#c0523f",
+          "custom": false,
+          "analysis": {
+            "verdict": "Bearish",
+            "score": 2,
+            "headline": "You are selling fairness you cannot measure, to buyers who inherit the liability, in the one application category regulators wrote the rules for first.",
+            "strengths": [
+              "The team can build, and the prototype proves it.",
+              "The underlying problem is real and the moral framing is sincere.",
+              "Nothing here is hard to pivot; the parsing work transfers to adjacent products."
+            ],
+            "concerns": [
+              "Removing names while keeping college-shaped and postcode-shaped signals is fairness theatre, and one audit will say so publicly.",
+              "No one on the team has ever screened a candidate or been accountable for a hiring decision.",
+              "Your entire test set was assembled by the two people who benefit from it looking good."
+            ],
+            "recommendation": "Sell the bias audit to companies that already screen, instead of selling a screener whose bias you cannot characterise."
+          }
+        }
+      ],
+      "synthesis": {
+        "overall_score": 3,
+        "verdict": "No-Go",
+        "executive_summary": "Two independent legal seats and the investor all landed bearish for different reasons, which is the pattern that makes a no-go rather than a caution. Automated candidate ranking sits in the highest-risk regulatory category; removing names does not remove the proxies, so the fairness claim cannot be substantiated; and the buyer segment hires too rarely to pay monthly. The parsing work is real and transferable — the product around it is not.",
+        "consensus_points": [
+          "Stripping identity fields does not remove proxy signals, so no fairness claim can be made from it today.",
+          "Per-candidate explanation and an outcome audit trail are prerequisites, not later features.",
+          "The customers inherit the legal exposure and will ask for indemnities this team cannot offer.",
+          "The team's engineering capability is not in question; the product framing is."
+        ],
+        "disagreements": [
+          {
+            "topic": "Whether there is a viable product here at all",
+            "sides": {
+              "The Investor": "Not at this price to this segment — the revenue ceiling is too low to matter.",
+              "The Designer": "There is a product, but it is a decision-support surface, not a ranking.",
+              "The Critic": "The sellable asset is the audit, not the screener."
+            },
+            "resolution": "The convergent answer is to sell measurement rather than ranking: a bias audit for companies already screening keeps the technical work and drops the liability the panel objects to."
+          },
+          {
+            "topic": "Whether anonymised ranking is better than the status quo",
+            "sides": {
+              "The Employment Lawyer": "A documented consistent process is better than ad-hoc judgement, if it is documented.",
+              "The Regulator": "Better intentions do not lower the obligations that attach to automated employment decisions.",
+              "The Critic": "Unmeasured fairness is worse than admitted bias, because it stops people looking."
+            },
+            "resolution": "It is only better if the outcomes are measured. Without an outcome audit the improvement is asserted, and an asserted improvement in this category is a liability rather than a feature."
+          }
+        ],
+        "strengths": [
+          "A working prototype and demonstrated engineering capability.",
+          "Field redaction before inference is a sound, verifiable design decision.",
+          "The underlying problem is real and buyers recognise it immediately."
+        ],
+        "weaknesses": [
+          "No per-candidate explanation and no audit trail — the parts regulation actually requires.",
+          "The fairness claim cannot be substantiated because proxy signals remain.",
+          "Nobody on the team has hiring-domain experience, and the test set is self-assembled."
+        ],
+        "opportunities": [
+          "Selling a bias audit to companies that already screen keeps the technical work and drops the liability.",
+          "Continuous-hiring companies upmarket would feel the pain monthly rather than quarterly.",
+          "The parsing and matching components transfer to adjacent, lower-risk products."
+        ],
+        "threats": [
+          "Applicant tracking incumbents shipping anonymised screening as a free checkbox.",
+          "A single disclosure request from a rejected candidate that the product cannot answer.",
+          "A public audit demonstrating that the anonymisation did not change outcomes."
+        ],
+        "action_plan_7_days": [
+          "Stop pre-selling into hiring decisions until the explanation and audit surface exists.",
+          "Run your 400-résumé test set for disparate impact and write down what you find.",
+          "Talk to three companies that already screen about paying for an audit instead of a ranker."
+        ],
+        "action_plan_30_days": [
+          "Rebuild the interface as unordered requirement-grouped shortlists with a recorded rejection reason.",
+          "Specify the immutable audit log and per-candidate explanation as the core product.",
+          "Write a retention and deletion policy for candidate data and publish it.",
+          "Get one hour with an employment lawyer on indemnity language before any contract is signed."
+        ],
+        "final_recommendation": "Do not launch this as a screener. The panel's two legal seats and its investor arrived at bearish independently, and their objections compound rather than cancel: the category is regulated, the fairness claim is unsubstantiated, and the buyers cannot carry the risk. Keep the parsing work and turn the product around — sell the bias audit to companies already screening. That version measures what this one only asserts, and it is the only path here the panel did not reject.",
+        "consensus_percentage": 74,
+        "agent_scores": {
+          "The Regulator": 3,
+          "The Employment Lawyer": 3,
+          "The Investor": 3,
+          "The Designer": 5,
+          "The Engineer": 5,
+          "The Critic": 2
+        },
+        "failed_agents": ["The Researcher"],
+        "score_chart": {
+          "type": "bar",
+          "title": "Score by expert",
+          "unit": "/10",
+          "note": "Built from the panel's actual scores. The Researcher was unreachable and is excluded.",
+          "measured": true,
+          "data": [
+            { "label": "The Designer", "value": 5 },
+            { "label": "The Engineer", "value": 5 },
+            { "label": "The Regulator", "value": 3 },
+            { "label": "The Employment Lawyer", "value": 3 },
+            { "label": "The Investor", "value": 3 },
+            { "label": "The Critic", "value": 2 }
+          ]
+        },
+        "charts": []
+      }
+    }
+  }
+]
