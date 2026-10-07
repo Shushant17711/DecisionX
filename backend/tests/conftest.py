@@ -9,6 +9,7 @@ import zipfile
 
 import pytest
 
+import agents.condense as condense
 import agents.llm_client as llm_client
 import agents.orchestrator as orchestrator
 import agents.personas as personas
@@ -72,11 +73,18 @@ class StubLLM:
         self.architect_count = architect_count
         self.persona = lambda system_prompt, user_prompt: dict(PERSONA)
         self.synthesis = lambda: dict(SYNTHESIS)
+        # Condenser: (system_prompt, user_prompt) -> {"digest": ...}; may be a coroutine.
+        self.condense = lambda system_prompt, user_prompt: {"digest": "Runway 9 months; CAC ₹400."}
         self.calls: list[dict] = []
 
     async def __call__(self, system_prompt, user_prompt, provider="groq", model=None, **kwargs):
         self.calls.append({"system": system_prompt, "user": user_prompt, "provider": provider, **kwargs})
         await asyncio.sleep(0)
+        if "Document Condenser" in system_prompt:
+            result = self.condense(system_prompt, user_prompt)
+            if asyncio.iscoroutine(result):
+                result = await result
+            return result
         if "Panel Architect" in system_prompt:
             return {
                 "personas": [
@@ -106,13 +114,14 @@ def _isolate(monkeypatch):
     monkeypatch.setattr(config, "CONTEXT_BUDGET_CHARS", 6000)
     monkeypatch.setattr(config, "ALLOWED_ORIGINS", ["http://localhost:3000", "http://127.0.0.1:3000"])
     monkeypatch.setattr(config, "API_TOKEN", None)
+    monkeypatch.setattr(config, "CONDENSE", True)
     yield
 
 
 @pytest.fixture
 def stub_llm(monkeypatch):
     stub = StubLLM()
-    for module in (orchestrator, personas, synthesizer, llm_client):
+    for module in (orchestrator, personas, synthesizer, llm_client, condense):
         monkeypatch.setattr(module, "async_call_llm", stub)
     monkeypatch.setattr(synthesizer, "available_providers", lambda: ["groq"])
     return stub

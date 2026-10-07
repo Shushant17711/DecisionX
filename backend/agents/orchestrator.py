@@ -2,6 +2,9 @@
 DecisionX — Orchestrator
 
 Core evaluation pipeline:
+0. If uploaded documents (or, for the Panel Architect, the typed context) do
+   not fit their share of the context budget, condense them once — a single
+   shared LLM pass ("reading" stage) whose digests every agent reads
 1. Classify the idea's domain
 2. Assemble the expert panel — built-in personas first, bespoke ones invented by
    the Panel Architect when the roster cannot cover the request
@@ -33,7 +36,15 @@ from typing import AsyncIterator
 
 import config
 from agents.charts import sanitize_chart
-from agents.context import ContextBundle, architect_budget, persona_budget, render, synthesis_budget
+from agents.condense import condense, needs_condensation
+from agents.context import (
+    ContextBundle,
+    annotate_manifest,
+    architect_budget,
+    persona_budget,
+    render,
+    synthesis_budget,
+)
 from agents.personas import (
     MAX_PANEL_SIZE,
     PERSONAS,
@@ -147,20 +158,9 @@ def _timed_out_result(persona: dict) -> dict:
     }
 
 
-async def assemble_panel(
-    idea: str, context: "ContextBundle | str", max_agents: int, architect_timeout: float = ARCHITECT_TIMEOUT
-) -> tuple[list[str], list[dict]]:
-    """
-    Build the expert panel for this idea.
-
-    Returns (detected_domains, personas). Bespoke personas are designed only when
-    the built-in roster genuinely cannot answer the request — either it ran out of
-    experts for the requested panel size, or the idea matched no known domain and
-    deserves purpose-built specialists rather than generic backfill.
-    """
-    max_agents = max(1, min(MAX_PANEL_SIZE, max_agents))
+def _plan_panel(idea: str, max_agents: int) -> tuple[list[str], list[dict], dict, int]:
+    """(domains, built-in core, critic, bespoke experts wanted) — no LLM calls."""
     domains = classify_idea_domain(idea)
-
     builtin_keys = select_personas(domains, max_agents=max_agents)
     core = [{"key": k, **PERSONAS[k]} for k in builtin_keys[:-1]]
     critic = {"key": "critic", **PERSONAS["critic"]}
@@ -174,11 +174,32 @@ async def assemble_panel(
         wanted = min(2, len(core))
     else:
         wanted = 0
+    return domains, core, critic, wanted
+
+
+def needs_architect(idea: str, max_agents: int) -> bool:
+    """Whether assemble_panel will call the Panel Architect for this request."""
+    return _plan_panel(idea, max(1, min(MAX_PANEL_SIZE, max_agents)))[3] > 0
+
+
+async def assemble_panel(
+    idea: str, context: "ContextBundle | str", max_agents: int, architect_timeout: float = ARCHITECT_TIMEOUT
+) -> tuple[list[str], list[dict]]:
+    """
+    Build the expert panel for this idea.
+
+    Returns (detected_domains, personas). Bespoke personas are designed only when
+    the built-in roster genuinely cannot answer the request — either it ran out of
+    experts for the requested panel size, or the idea matched no known domain and
+    deserves purpose-built specialists rather than generic backfill.
+    """
+    max_agents = max(1, min(MAX_PANEL_SIZE, max_agents))
+    domains, core, critic, wanted = _plan_panel(idea, max_agents)
 
     if wanted:
         custom = await design_custom_personas(
             idea,
-            render(context, architect_budget()),
+            render(context, architect_budget(), architect=True),
             count=wanted,
             existing=[p["name"] for p in core],
             timeout=architect_timeout,
@@ -190,14 +211,31 @@ async def assemble_panel(
 
 
 async def evaluate_idea_stream(
-    idea: str, context: "ContextBundle | str" = "", max_agents: int = 5
+    idea: str,
+    context: "ContextBundle | str" = "",
+    max_agents: int = 5,
+    manifest: list[dict] | None = None,
 ) -> AsyncIterator[dict]:
-    """Yield pipeline events as they happen. See module docstring."""
+    """
+    Yield pipeline events as they happen. See module docstring.
+
+    `manifest` (the attachment manifest for `context`'s documents) is
+    re-annotated in place after condensation and re-emitted as an
+    `attachments` event, so the UI shows what the experts will actually read.
+    """
     started = time.monotonic()
     run_timeout = float(config.RUN_TIMEOUT)
     deadline = started + run_timeout
     experts_deadline = deadline - _synthesis_reserve(run_timeout)
     bundle = ContextBundle.coerce(context)
+
+    include_typed = needs_architect(idea, max_agents)
+    if needs_condensation(bundle, include_typed=include_typed):
+        yield {"type": "stage", "stage": "reading"}
+        await condense(bundle, idea, deadline, include_typed=include_typed)
+        if manifest:
+            annotate_manifest(manifest, bundle)
+            yield {"type": "attachments", "attachments": json_safe(manifest)}
 
     yield {"type": "stage", "stage": "assembling"}
 
@@ -298,13 +336,15 @@ async def evaluate_idea_stream(
     }
 
 
-async def evaluate_idea(idea: str, context: "ContextBundle | str" = "", max_agents: int = 5) -> dict:
+async def evaluate_idea(
+    idea: str, context: "ContextBundle | str" = "", max_agents: int = 5, manifest: list[dict] | None = None
+) -> dict:
     """Blocking variant — drains the stream and returns the final result.
 
     aclosing() guarantees the stream's cleanup (cancelling pending experts) runs
     immediately if this coroutine is cancelled, not whenever the GC gets to it.
     """
-    async with aclosing(evaluate_idea_stream(idea, context, max_agents)) as stream:
+    async with aclosing(evaluate_idea_stream(idea, context, max_agents, manifest)) as stream:
         async for event in stream:
             if event["type"] == "done":
                 return event["result"]

@@ -136,6 +136,8 @@ DecisionX uses NDJSON-based streaming to provide incremental results to the fron
 
 Instead of waiting for every agent to finish before displaying anything, completed evaluations can appear progressively.
 
+Event order: `attachments` (if files were uploaded) → `stage: reading` and a second `attachments` (only when long documents are being condensed) → `stage: assembling` → `panel` → one `persona` per expert → `stage: synthesizing` → `done` (or `error`).
+
 This creates a more interactive experience where users can watch the virtual boardroom work in real time.
 
 ---
@@ -653,13 +655,16 @@ The backend reads `DECISIONX_*` variables from the environment, or from `backend
 | `DECISIONX_API_TOKEN` | unset | If set, `/api/evaluate*` requires header `X-DecisionX-Token` (401 otherwise) |
 | `DECISIONX_MAX_CONCURRENT_AGENTS` | `12` | Persona LLM calls in flight across all evaluations |
 | `DECISIONX_RUN_TIMEOUT` | `120` | Seconds per evaluation; slow experts are reported as timed out |
-| `DECISIONX_CONTEXT_BUDGET_CHARS` | `6000` | Context + documents each expert sees (synthesizer ½, architect ¼), split fairly per file |
+| `DECISIONX_CONTEXT_BUDGET_CHARS` | `6000` | Characters each expert sees (synthesizer ½, architect ¼). Typed context is never cut for experts or synthesis; documents share the rest (at least ¼ of the budget), split fairly per file |
+| `DECISIONX_CONDENSE` | `true` | Condense documents that do not fit their share with one shared LLM pass per run, instead of cutting them off |
 | `DECISIONX_PARSE_TIMEOUT` | `20` | Seconds per uploaded file |
 | `DECISIONX_PARSER_ISOLATION` | `subprocess` | `subprocess` (killable, memory-capped) or `thread` |
 | `DECISIONX_PARSE_MEMORY_MB` | `1024` | Memory cap for the parse worker (POSIX) |
 | `DECISIONX_LOG_LEVEL` | `INFO` | Logging level |
 
-Request limits: idea ≤ 4,000 characters, typed context ≤ 12,000, `num_personas` 1–30, ≤ 8 files of ≤ 10 MB each and 40 MB in total. Uploads accept PDF, DOCX, XLSX, CSV and plain text; legacy `.xls`/`.doc` are rejected with a message. Uploaded text is passed to the experts inside delimiters marked as untrusted reference material, and each attachment in the result reports `included`, `truncated`, `chars_extracted` and `chars_included`.
+Request limits: idea ≤ 4,000 characters, typed context ≤ 12,000, `num_personas` 1–30, ≤ 8 files of ≤ 10 MB each and 40 MB in total. Uploads accept PDF, DOCX, XLSX, CSV and plain text; legacy `.xls`/`.doc` are rejected with a message. Uploaded text is passed to the experts inside delimiters marked as untrusted reference material, and each attachment in the result reports `included`, `truncated`, `condensed`, `coverage`, `chars_extracted` and `chars_included`.
+
+**Long documents.** When a document does not fit its share of the budget, the run starts with an optional `reading` stage: one condensation pass, shared by every expert, turns it into a dense digest of facts, numbers, claims, risks and constraints. Documents over 12,000 characters are condensed in chunks concurrently; beyond 8 chunks, evenly spaced sections are sampled and the digest says so (`coverage` is the fraction actually read; with condensation on, up to 400,000 characters are extracted per file). The pass uses at most a quarter of the remaining run time (≤ 25 s); a document whose condensation fails or runs out of time is cut at its share as before (`condensed: false`, `truncated: true`). The stream then re-sends the `attachments` event so the UI shows the condensed state. Typed context is only condensed for the Panel Architect, and only when the architect is going to run.
 
 If you bind beyond loopback (`DECISIONX_HOST=0.0.0.0`), set `DECISIONX_API_TOKEN` — otherwise anyone who can reach the port can spend your LLM quota.
 
@@ -673,6 +678,21 @@ pip install -r requirements-dev.txt
 python -m pytest            # LLM calls are stubbed; no network
 DECISIONX_LIVE_TESTS=1 python -m pytest tests/integration   # real provider call
 ```
+
+---
+
+# 🖥️ Omarchy / Hyprland launcher
+
+`start_omarchy.sh` wraps `start_dev.sh` for desktop use: it starts both servers in the background, waits until they answer, and opens the UI as a web-app window (`omarchy-launch-webapp`, falling back to `xdg-open`). Errors show as desktop notifications.
+
+```bash
+./start_omarchy.sh install   # adds `decisionx` to ~/.local/bin and a "DecisionX" app-launcher entry
+decisionx                    # start if needed, then open the window
+decisionx stop | restart | status | logs
+decisionx uninstall
+```
+
+Server output goes to `~/.local/state/decisionx/server.log`. Right-click the launcher entry for Stop and Restart.
 
 ---
 

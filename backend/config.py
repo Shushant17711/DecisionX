@@ -42,6 +42,19 @@ def _env_number(name: str, default, cast, lo, hi):
     return value
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    value = raw.strip().lower()
+    if value in ("1", "true", "yes", "on"):
+        return True
+    if value in ("0", "false", "no", "off"):
+        return False
+    _log.warning("Ignoring %s=%r — expected 1/0, true/false, yes/no or on/off", name, raw)
+    return default
+
+
 def _env_list(name: str, default: list[str]) -> list[str]:
     raw = os.environ.get(name)
     if raw is None or not raw.strip():
@@ -69,8 +82,13 @@ MAX_CONCURRENT_AGENTS = _env_number("DECISIONX_MAX_CONCURRENT_AGENTS", 12, int, 
 RUN_TIMEOUT = _env_number("DECISIONX_RUN_TIMEOUT", 120.0, float, 10.0, 1800.0)
 
 # Characters of typed context + documents each expert sees. The synthesizer gets
-# half of this and the Panel Architect a quarter.
+# half of this and the Panel Architect a quarter. Typed context is never cut for
+# experts or synthesis; documents share what is left (with a guaranteed floor).
 CONTEXT_BUDGET_CHARS = _env_number("DECISIONX_CONTEXT_BUDGET_CHARS", 6000, int, 500, 100_000)
+
+# When a document does not fit its share of the budget, condense it with one
+# shared LLM pass per run (before the panel runs) instead of cutting it off.
+CONDENSE = _env_bool("DECISIONX_CONDENSE", True)
 
 # ── Upload parsing ──────────────────────────────────────────────────────────
 PARSE_TIMEOUT = _env_number("DECISIONX_PARSE_TIMEOUT", 20.0, float, 1.0, 300.0)

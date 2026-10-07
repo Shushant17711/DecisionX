@@ -30,7 +30,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 
-from agents.context import ContextBundle, annotate_manifest  # noqa: E402
+from agents.context import MAX_TYPED_CHARS, ContextBundle, annotate_manifest  # noqa: E402
 from agents.llm_client import available_providers, close_clients  # noqa: E402
 from agents.orchestrator import evaluate_idea, evaluate_idea_stream  # noqa: E402
 from agents.personas import MAX_PANEL_SIZE  # noqa: E402
@@ -41,7 +41,7 @@ log = logging.getLogger("decisionx.api")
 
 MAX_UPLOAD_FILES = 8
 MAX_IDEA_CHARS = 4000
-MAX_CONTEXT_CHARS = 12000
+MAX_CONTEXT_CHARS = MAX_TYPED_CHARS
 # Whole multipart body: every upload plus the form fields and multipart overhead.
 MAX_REQUEST_BYTES = MAX_TOTAL_UPLOAD_BYTES + 1024 * 1024
 
@@ -211,7 +211,7 @@ async def evaluate(
     try:
         bundle, manifest = await _build_context(context, real_files)
         result = await asyncio.wait_for(
-            evaluate_idea(idea, bundle, max_agents=panel_size),
+            evaluate_idea(idea, bundle, max_agents=panel_size, manifest=manifest),
             timeout=config.RUN_TIMEOUT + 30,
         )
         result["attachments"] = manifest
@@ -242,6 +242,8 @@ async def evaluate_stream(
     """
     Same pipeline as /api/evaluate, delivered as newline-delimited JSON.
     Each line is one event: attachments | stage | panel | persona | done | error.
+    `attachments` comes first and again after the optional `reading` stage
+    (document condensation), so the second one reflects condensed digests.
     """
     idea, context, panel_size, real_files = _validate(idea, context, num_personas, files)
     request_id = _start_request()
@@ -259,7 +261,7 @@ async def evaluate_stream(
             if manifest:
                 yield _ndjson({"type": "attachments", "attachments": manifest})
 
-            async with aclosing(evaluate_idea_stream(idea, bundle, panel_size)) as stream:
+            async with aclosing(evaluate_idea_stream(idea, bundle, panel_size, manifest=manifest)) as stream:
                 async for event in stream:
                     if event["type"] == "done":
                         event["result"]["attachments"] = manifest

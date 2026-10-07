@@ -20,7 +20,7 @@ import re
 from functools import lru_cache
 
 from agents.charts import CHART_SCHEMA_FIELD, CHART_SCHEMA_PROMPT
-from agents.context import UNTRUSTED_DOCS_RULE, architect_budget, persona_budget
+from agents.context import UNTRUSTED_DOCS_RULE, architect_budget, persona_budget, rendered_cap
 from agents.llm_client import async_call_llm
 
 log = logging.getLogger("decisionx.personas")
@@ -481,7 +481,7 @@ def get_persona_prompt(persona: dict, idea: str, context: str = "") -> tuple[str
         f"Critically evaluate this idea from your perspective as {persona['role']}:\n\n**Idea:** {idea}"
     ]
     if context:
-        user_parts.append(f"\n**Additional Context:**\n{context[: persona_budget() + 2500]}")
+        user_parts.append(f"\n**Additional Context:**\n{context[: rendered_cap(persona_budget())]}")
     user_parts.append("\nGive your honest, structured analysis.")
 
     return system, "\n".join(user_parts)

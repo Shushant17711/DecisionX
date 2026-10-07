@@ -64,7 +64,14 @@ async def read_limited(upload, limit: int) -> tuple[bytes, bool]:
     return b"".join(chunks), False
 
 
+# With condensation on, read far past the prompt budget: the condenser chunks
+# (and, beyond its chunk cap, samples) whatever is extracted.
+MAX_CONDENSE_EXTRACT_CHARS = 400_000
+
+
 def _max_chars() -> int:
+    if config.CONDENSE:
+        return max(persona_budget(), MAX_CONDENSE_EXTRACT_CHARS)
     # A single file may use the whole expert budget when it is the only part.
     return persona_budget()
 

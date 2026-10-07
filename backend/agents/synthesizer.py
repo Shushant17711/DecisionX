@@ -20,7 +20,7 @@ import logging
 import time
 
 from agents.charts import CHART_SCHEMA_PROMPT, sanitize_charts
-from agents.context import UNTRUSTED_DOCS_RULE, synthesis_budget
+from agents.context import UNTRUSTED_DOCS_RULE, rendered_cap, synthesis_budget
 from agents.llm_client import async_call_llm, available_providers
 from agents.validation import coerce_score, coerce_str, coerce_str_list, json_safe, normalize_synthesis
 from observability import incr
@@ -187,7 +187,7 @@ async def synthesize_verdict(
 
     user_parts = [f"Idea being evaluated:\n{idea}"]
     if context:
-        user_parts.append(f"\nAdditional context:\n{context[: synthesis_budget() + 2000]}")
+        user_parts.append(f"\nAdditional context:\n{context[: rendered_cap(synthesis_budget())]}")
     user_parts.append(f"\nExpert panel analyses:\n\n{all_summaries}")
     user_parts.append("\nSynthesize into a unified verdict. Highlight disagreements.")
 
