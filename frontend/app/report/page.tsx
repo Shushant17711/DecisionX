@@ -11,13 +11,13 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { DownloadMenu } from "@/components/DownloadMenu";
 import { Icon, personaIcon } from "@/components/Icon";
 import { getHistory, getHistoryServerSnapshot, subscribeHistory } from "@/lib/history";
 import { getNote, setNote } from "@/lib/notes";
-import { formatDate, statusLabel } from "@/lib/report";
+import { formatDate, formatNumber, statusLabel } from "@/lib/report";
 import {
   personaRole,
   personaStatus,
@@ -92,7 +92,7 @@ function ExpertEntry({ persona }: { persona: PersonaResult }) {
           </span>
         )}
         <span className="tnum ml-auto shrink-0 text-[1.25rem] font-light" style={{ color: ink }}>
-          {analysis?._failed ? "—" : analysis?.score}
+          {analysis?._failed ? "—" : formatNumber(analysis?.score)}
           {!analysis?._failed && <span className="text-[0.75rem] text-[var(--doc-muted)]">/10</span>}
         </span>
       </header>
@@ -145,25 +145,59 @@ function ReportView() {
   const [seeding, setSeeding] = useState(false);
   const noteLoadedFor = useRef<string | null>(null);
   const printed = useRef(false);
+  /** An edit not yet written to storage, tagged with the report it belongs to. */
+  const pendingNote = useRef<{ id: string; text: string } | null>(null);
+
+  const flushNote = useCallback(() => {
+    const pending = pendingNote.current;
+    if (!pending) return;
+    pendingNote.current = null;
+    setNote(pending.id, pending.text);
+  }, []);
+
+  const changeNote = (text: string) => {
+    setNoteText(text);
+    if (id) pendingNote.current = { id, text };
+  };
 
   useEffect(() => {
     if (!id || noteLoadedFor.current === id) return;
+    flushNote(); // anything typed on the previous report lands on that report
     noteLoadedFor.current = id;
     setNoteText(getNote(id));
-  }, [id]);
+  }, [id, flushNote]);
 
+  /* Debounced save: only edits are written, never the value loaded on mount. */
   useEffect(() => {
-    if (!id) return;
-    const handle = window.setTimeout(() => setNote(id, note), 400);
+    if (!pendingNote.current) return;
+    const handle = window.setTimeout(flushNote, 400);
     return () => window.clearTimeout(handle);
-  }, [id, note]);
+  }, [note, flushNote]);
 
+  /* …and nothing typed is lost to navigation, reload or a closing tab. */
   useEffect(() => {
-    if (!wantsPrint || !entry || printed.current) return;
-    printed.current = true;
-    const handle = window.setTimeout(() => window.print(), 400);
+    window.addEventListener("pagehide", flushNote);
+    window.addEventListener("beforeunload", flushNote);
+    return () => {
+      window.removeEventListener("pagehide", flushNote);
+      window.removeEventListener("beforeunload", flushNote);
+      flushNote();
+    };
+  }, [flushNote]);
+
+  /* ?print=1 opens the print dialog once. The guard is set inside the timer,
+     not before it, so StrictMode's mount → cleanup → mount still prints; the
+     flag is then dropped from the URL so a refresh does not print again. */
+  useEffect(() => {
+    if (!wantsPrint || !entry) return;
+    const handle = window.setTimeout(() => {
+      if (printed.current) return;
+      printed.current = true;
+      window.print();
+      router.replace(`/report?id=${encodeURIComponent(entry.id)}`, { scroll: false });
+    }, 400);
     return () => window.clearTimeout(handle);
-  }, [wantsPrint, entry]);
+  }, [wantsPrint, entry, router]);
 
   const loadSamples = async () => {
     setSeeding(true);
@@ -248,7 +282,7 @@ function ReportView() {
 
         <div className="mt-7 flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <span className="tnum text-[3rem] font-light leading-none" style={{ color: ink }}>
-            {entry.score}
+            {formatNumber(entry.score)}
           </span>
           <span
             className="rounded-[2px] border px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.1em]"
@@ -465,7 +499,7 @@ function ReportView() {
         <textarea
           id="reviewer-note"
           value={note}
-          onChange={(e) => setNoteText(e.target.value)}
+          onChange={(e) => changeNote(e.target.value)}
           rows={3}
           placeholder="What you decided, what you disagree with, what happens next…"
           className="doc-field mt-2 w-full resize-y rounded-[3px] px-3 py-2.5 text-[0.9375rem] leading-relaxed print:hidden"

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -14,14 +15,17 @@ import {
 
 import { Icon } from "./Icon";
 import { RoleTabs, StatusChips } from "./RoleFilter";
+import { confirmAbandonRun, loadFromHistory } from "@/lib/evaluation";
 import {
   clearHistory,
   deleteEntry,
   getHistory,
   getHistoryServerSnapshot,
   relativeTime,
+  restoreEntry,
   subscribeHistory,
   type HistoryEntry,
+  type RemovedEntry,
 } from "@/lib/history";
 import { personaRole, verdictStatus, type RoleId, type StatusId } from "@/lib/roles";
 import { seedSamples } from "@/lib/samples";
@@ -33,6 +37,12 @@ function useHistory(): HistoryEntry[] {
     getHistoryServerSnapshot,
   );
 }
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** How long the "Undo" offer stays up after a delete. */
+const UNDO_MS = 6000;
 
 function verdictClass(verdict: string) {
   const v = verdict?.toLowerCase();
@@ -71,23 +81,102 @@ function HistoryPanel({
   const [status, setStatus] = useState<StatusId | "all">("all");
   const [seeding, setSeeding] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [removed, setRemoved] = useState<RemovedEntry | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const undoRef = useRef<HTMLButtonElement>(null);
+  const undoTimer = useRef<number | null>(null);
+  const titleId = useId();
 
+  /* Callers often pass a fresh arrow each render. Reading it through a ref keeps
+     the focus effect below from re-running — and stealing focus back to the
+     search field — every time the parent re-renders. */
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  const close = useCallback(() => onCloseRef.current(), []);
+
+  /* Runs once per opening (this panel mounts when `open` turns true): move
+     focus in, keep Tab inside the dialog, close on Escape, and hand focus back
+     to whatever opened it when the panel goes away. */
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (el) => el.getClientRects().length > 0,
+      );
+      if (focusables.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      const inside = active instanceof Node && panel.contains(active);
+      if (e.shiftKey) {
+        if (!inside || active === first || active === panel) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (!inside || active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", onKey);
+
+    document.addEventListener("keydown", onKey);
     const t = window.setTimeout(
-      () => (searchRef.current ?? closeRef.current)?.focus(),
+      () => (searchRef.current ?? closeRef.current ?? panelRef.current)?.focus(),
       60,
     );
     return () => {
-      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey);
       window.clearTimeout(t);
+      if (opener && opener.isConnected) opener.focus({ preventScroll: true });
     };
-  }, [onClose]);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (undoTimer.current != null) window.clearTimeout(undoTimer.current);
+    },
+    [],
+  );
+
+  const remove = (entry: HistoryEntry) => {
+    const outcome = deleteEntry(entry.id);
+    if (!outcome) return;
+    setRemoved(outcome);
+    if (undoTimer.current != null) window.clearTimeout(undoTimer.current);
+    undoTimer.current = window.setTimeout(() => {
+      undoTimer.current = null;
+      setRemoved(null);
+    }, UNDO_MS);
+    // The focused delete button has just disappeared; land on Undo instead.
+    window.setTimeout(() => undoRef.current?.focus(), 0);
+  };
+
+  const undo = () => {
+    if (!removed) return;
+    restoreEntry(removed);
+    setRemoved(null);
+    if (undoTimer.current != null) {
+      window.clearTimeout(undoTimer.current);
+      undoTimer.current = null;
+    }
+  };
 
   /* A record is relevant to a role when any expert on its panel answered to that
      role, so "Authority" surfaces every past evaluation a compliance reader
@@ -148,37 +237,47 @@ function HistoryPanel({
 
   const open_ = useCallback(
     (id: string) => {
-      onClose();
+      // Opening a record stops a live run, so ask first — and stay put on "no".
+      if (!confirmAbandonRun()) return;
+      loadFromHistory(id, { confirmed: true });
+      onCloseRef.current();
       router.push(`/results?id=${id}`);
     },
-    [onClose, router],
+    [router],
   );
 
   return (
     <>
+      {/* Pointer-only dismiss; keyboard users have Escape and the close button. */}
       <motion.button
         key="scrim"
+        type="button"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        onClick={onClose}
-        aria-label="Close history"
+        onClick={close}
+        tabIndex={-1}
+        aria-hidden="true"
         className="fixed inset-0 z-40 bg-[oklch(2%_0_0/0.62)] backdrop-blur-[2px]"
       />
 
       <motion.aside
         key="panel"
+        ref={panelRef}
         initial={{ x: "-100%" }}
         animate={{ x: 0 }}
         exit={{ x: "-100%" }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        aria-label="Evaluation history"
-        className="fixed inset-y-0 left-0 z-50 flex w-[min(23rem,90vw)] flex-col border-r border-[var(--border-subtle)] bg-[var(--surface)] shadow-[var(--shadow-lifted)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="fixed inset-y-0 left-0 z-50 flex w-[min(23rem,90vw)] flex-col border-r border-[var(--border-subtle)] bg-[var(--surface)] shadow-[var(--shadow-lifted)] focus:outline-none"
       >
         <header className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
           <div>
-            <h2 className="text-[0.9375rem] font-medium tracking-tight">
+            <h2 id={titleId} className="text-[0.9375rem] font-medium tracking-tight">
               History
             </h2>
             <p className="label mt-0.5">
@@ -191,7 +290,8 @@ function HistoryPanel({
           </div>
           <button
             ref={closeRef}
-            onClick={onClose}
+            type="button"
+            onClick={close}
             className="btn-quiet grid h-8 w-8 place-items-center"
             aria-label="Close history"
           >
@@ -295,7 +395,7 @@ function HistoryPanel({
                           {entry.verdict}
                         </span>
                         <span className="tnum text-[0.6875rem] text-[var(--text-muted)]">
-                          {entry.score}/10 · {entry.panelSize} experts
+                          {entry.score ?? "—"}/10 · {entry.panelSize} experts
                         </span>
                         <time
                           dateTime={new Date(entry.createdAt).toISOString()}
@@ -307,17 +407,21 @@ function HistoryPanel({
                     </button>
                     <Link
                       href={`/report?id=${entry.id}`}
-                      onClick={onClose}
+                      onClick={close}
                       aria-label={`Open report: ${entry.idea.slice(0, 40)}`}
                       title="Open the full report"
-                      className="absolute right-10 top-3 grid h-7 w-7 place-items-center rounded-[2px] text-[var(--text-muted)] opacity-0 transition-[opacity,color] duration-150 focus-visible:opacity-100 group-hover:opacity-100 hover:text-[var(--accent)]"
+                      className="absolute right-10 top-3 grid h-7 w-7 place-items-center rounded-[2px] text-[var(--text-muted)] opacity-100 transition-[opacity,color] duration-150 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-[var(--accent)]"
                     >
                       <Icon name="file" size={14} />
                     </Link>
+                    {/* Always visible on touch screens (no hover to reveal it), and
+                        whenever the row has keyboard focus. */}
                     <button
-                      onClick={() => deleteEntry(entry.id)}
+                      type="button"
+                      onClick={() => remove(entry)}
                       aria-label={`Delete evaluation: ${entry.idea.slice(0, 40)}`}
-                      className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-[2px] text-[var(--text-muted)] opacity-0 transition-[opacity,color] duration-150 focus-visible:opacity-100 group-hover:opacity-100 hover:text-[var(--vermilion)]"
+                      title="Delete — you can undo for a few seconds"
+                      className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-[2px] text-[var(--text-muted)] opacity-100 transition-[opacity,color] duration-150 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-[var(--vermilion)]"
                     >
                       <Icon name="trash" size={14} />
                     </button>
@@ -325,6 +429,25 @@ function HistoryPanel({
                 );
               })}
             </ul>
+          )}
+        </div>
+
+        {/* Polite live region: always mounted so the undo offer is announced. */}
+        <div role="status" aria-live="polite">
+          {removed && (
+            <div className="flex items-center gap-3 border-t border-[var(--border-subtle)] px-5 py-3">
+              <span className="mr-auto min-w-0 truncate text-[0.8125rem] text-[var(--text-secondary)]">
+                Deleted “{removed.entry.idea.slice(0, 48)}”
+              </span>
+              <button
+                ref={undoRef}
+                type="button"
+                onClick={undo}
+                className="btn-quiet shrink-0 px-2.5 py-1 text-[0.75rem]"
+              >
+                Undo
+              </button>
+            </div>
           )}
         </div>
 

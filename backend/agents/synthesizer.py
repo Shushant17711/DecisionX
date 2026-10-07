@@ -16,10 +16,16 @@ Providers with no key file loaded are skipped rather than timed out against.
 
 import asyncio
 import json
+import logging
 import time
 
 from agents.charts import CHART_SCHEMA_PROMPT, sanitize_charts
+from agents.context import UNTRUSTED_DOCS_RULE, synthesis_budget
 from agents.llm_client import async_call_llm, available_providers
+from agents.validation import coerce_score, coerce_str, coerce_str_list, json_safe, normalize_synthesis
+from observability import incr
+
+log = logging.getLogger("decisionx.synthesizer")
 
 
 _PROVIDER_CHAIN = [
@@ -29,6 +35,14 @@ _PROVIDER_CHAIN = [
 ]
 
 _SYNTHESIS_DEADLINE = 55.0
+_MIN_CALL_SECONDS = 3.0
+
+
+def _valid_score(analysis: dict) -> int | None:
+    """The persona's score as an int 1..10, or None if failed / non-numeric."""
+    if not isinstance(analysis, dict) or analysis.get("_failed"):
+        return None
+    return coerce_score(analysis.get("score"))
 
 
 def _build_local_synthesis(persona_results: list[dict], idea: str, scores: list[float]) -> dict:
@@ -39,14 +53,14 @@ def _build_local_synthesis(persona_results: list[dict], idea: str, scores: list[
 
     for p in persona_results:
         a = p["analysis"]
-        if a.get("_failed"):
+        if _valid_score(a) is None:
             continue
-        all_strengths.extend(a.get("strengths") or [])
-        all_concerns.extend(a.get("concerns") or [])
-        rec = a.get("recommendation", "")
+        all_strengths.extend(coerce_str_list(a.get("strengths")))
+        all_concerns.extend(coerce_str_list(a.get("concerns")))
+        rec = coerce_str(a.get("recommendation"))
         if rec:
             all_recommendations.append(f"{p['name']}: {rec}")
-        hl = a.get("headline", "")
+        hl = coerce_str(a.get("headline"))
         if hl:
             headlines.append(hl)
 
@@ -108,21 +122,33 @@ def _build_local_synthesis(persona_results: list[dict], idea: str, scores: list[
     }
 
 
-async def synthesize_verdict(persona_results: list[dict], idea: str, context: str = "") -> dict:
+async def synthesize_verdict(
+    persona_results: list[dict],
+    idea: str,
+    context: str = "",
+    deadline: float | None = None,
+) -> dict:
+    """
+    Produce the board-level verdict. `context` should already be rendered within
+    agents.context.synthesis_budget(). `deadline` is a time.monotonic() instant;
+    each provider call is given only the time left before it, and once too little
+    remains the local synthesis is used instead of starting another call.
+    """
     persona_summaries = []
-    scores = []
+    scores: list[int] = []
     for p in persona_results:
         a = p["analysis"]
-        if a.get("_failed"):
+        score = _valid_score(a)
+        if score is None:
             continue
-        scores.append(a.get("score", 5))
+        scores.append(score)
         persona_summaries.append(
             f"**{p['name']} ({p['role']}):**\n"
-            f"  Verdict: {a.get('verdict', 'N/A')} | Score: {a.get('score', 'N/A')}/10\n"
-            f"  Headline: {a.get('headline', 'N/A')}\n"
-            f"  Strengths: {json.dumps(a.get('strengths', []))}\n"
-            f"  Concerns: {json.dumps(a.get('concerns', []))}\n"
-            f"  Recommendation: {a.get('recommendation', 'N/A')}"
+            f"  Verdict: {coerce_str(a.get('verdict')) or 'N/A'} | Score: {score}/10\n"
+            f"  Headline: {coerce_str(a.get('headline')) or 'N/A'}\n"
+            f"  Strengths: {json.dumps(coerce_str_list(a.get('strengths')))}\n"
+            f"  Concerns: {json.dumps(coerce_str_list(a.get('concerns')))}\n"
+            f"  Recommendation: {coerce_str(a.get('recommendation')) or 'N/A'}"
         )
 
     all_summaries = "\n\n".join(persona_summaries)
@@ -133,6 +159,7 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
         "Your job is to produce a unified, balanced verdict. "
         "PAY SPECIAL ATTENTION to where experts DISAGREE — these tensions are the most valuable insight. "
         "Be actionable and honest. Don't sugarcoat.\n\n"
+        + UNTRUSTED_DOCS_RULE + "\n\n"
         "Respond ONLY with valid JSON:\n"
         "{\n"
         '  "overall_score": <1-10>,\n'
@@ -160,59 +187,63 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
 
     user_parts = [f"Idea being evaluated:\n{idea}"]
     if context:
-        user_parts.append(f"\nAdditional context:\n{context[:2000]}")
+        user_parts.append(f"\nAdditional context:\n{context[: synthesis_budget() + 2000]}")
     user_parts.append(f"\nExpert panel analyses:\n\n{all_summaries}")
     user_parts.append("\nSynthesize into a unified verdict. Highlight disagreements.")
 
     user_prompt = "\n".join(user_parts)
 
     result = None
-    last_error = ""
-    started = time.perf_counter()
-    usable = available_providers()
+    started = time.monotonic()
+    hard_deadline = started + _SYNTHESIS_DEADLINE
+    if deadline is not None:
+        hard_deadline = min(hard_deadline, deadline)
+    usable = available_providers() if scores else []  # nothing to synthesize from
 
     for attempt in _PROVIDER_CHAIN:
         if attempt["provider"] not in usable:
             continue
-        if time.perf_counter() - started > _SYNTHESIS_DEADLINE:
+        remaining = hard_deadline - time.monotonic()
+        if remaining < _MIN_CALL_SECONDS:
+            log.info("synthesis: %.1fs left — skipping remaining providers", max(0.0, remaining))
             break
+        call_timeout = min(attempt["timeout"], remaining - 0.5)
+        call_started = time.monotonic()
         try:
-            candidate = await async_call_llm(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                provider=attempt["provider"],
-                model=attempt["model"],
-                max_tokens=1800,
-                temperature=0.5,
-                timeout=attempt["timeout"],
+            candidate = await asyncio.wait_for(
+                async_call_llm(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    provider=attempt["provider"],
+                    model=attempt["model"],
+                    max_tokens=1800,
+                    temperature=0.5,
+                    timeout=call_timeout,
+                    expect_keys=("overall_score",),
+                ),
+                timeout=call_timeout + 0.5,
             )
-
-
-            if "overall_score" not in candidate:
-                raise ValueError(
-                    candidate.get("headline", "LLM returned persona-shaped fallback, not synthesis")
-                )
-
-
-            has_content = any(
-                len(candidate.get(field) or []) > 0
-                for field in ("strengths", "weaknesses", "opportunities", "threats")
-            )
-            if not has_content:
-                raise ValueError("Synthesis JSON present but SWOT arrays are all empty")
-
-            result = candidate
+            normalized = normalize_synthesis(candidate)
+            if normalized is None:
+                reason = candidate.get("_reason", "invalid_synthesis") if isinstance(candidate, dict) else "invalid_synthesis"
+                raise ValueError(reason)
+            result = normalized
+            log.info("synthesis via %s/%s in %.1fs", attempt["provider"], attempt["model"],
+                     time.monotonic() - call_started)
             break
 
         except asyncio.CancelledError:
             raise
-        except Exception as exc:
-            last_error = str(exc)
+        except Exception as exc:  # noqa: BLE001 — fall through to the next provider
+            reason = "timeout" if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) else str(exc)[:60]
+            incr("synthesis_provider_failure")
+            log.warning("synthesis via %s failed after %.1fs: %s", attempt["provider"],
+                        time.monotonic() - call_started, reason)
             continue
 
     if result is None:
+        incr("synthesis_local_fallback")
         result = _build_local_synthesis(persona_results, idea, scores)
-
 
     if scores:
         score_range = max(scores) - min(scores)
@@ -225,9 +256,9 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
     result["charts"] = sanitize_charts(result.get("charts"), limit=2)
 
     real_scores = [
-        (p["name"], p["analysis"].get("score"))
+        (p["name"], score)
         for p in persona_results
-        if not p["analysis"].get("_failed") and isinstance(p["analysis"].get("score"), (int, float))
+        if (score := _valid_score(p["analysis"])) is not None
     ]
     if len(real_scores) >= 3:
         result["score_chart"] = {
@@ -241,14 +272,10 @@ async def synthesize_verdict(persona_results: list[dict], idea: str, context: st
                 for name, score in real_scores
             ][:12],
         }
-    result["agent_scores"] = {
-        p["name"]: p["analysis"].get("score", 5)
-        for p in persona_results
-        if not p["analysis"].get("_failed")
-    }
+    result["agent_scores"] = {name: score for name, score in real_scores}
     result["failed_agents"] = [
-        p["name"] for p in persona_results if p["analysis"].get("_failed")
+        p["name"] for p in persona_results if _valid_score(p["analysis"]) is None
     ]
     result["panel_unreachable"] = bool(persona_results) and not scores
 
-    return result
+    return json_safe(result)

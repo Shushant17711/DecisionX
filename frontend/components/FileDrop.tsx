@@ -8,7 +8,7 @@ import { Icon } from "./Icon";
 export const MAX_FILES = 8;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-const ACCEPTED = [".pdf", ".csv", ".xlsx", ".xls", ".txt", ".md", ".json", ".yaml", ".yml", ".tsv"];
+const ACCEPTED = [".pdf", ".csv", ".xlsx", ".docx", ".txt", ".md", ".json", ".yaml", ".yml", ".tsv"];
 const ACCEPT_ATTR = ACCEPTED.join(",");
 
 export function formatBytes(bytes: number): string {
@@ -128,7 +128,7 @@ export function FileDrop({
           <p id={describedBy} className="text-[0.75rem] leading-relaxed text-[var(--text-muted)]">
             {full
               ? `${MAX_FILES} of ${MAX_FILES} attached`
-              : "PDF, CSV, Excel, or text — drop them here. The panel reads them as context."}
+              : "PDF, CSV, Excel, Word, or text — drop them here. The panel reads them as context."}
           </p>
         </div>
 

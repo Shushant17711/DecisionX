@@ -10,29 +10,54 @@ Latency notes (these are the reason the client looks the way it does):
     that dominated wall-clock time.
   * `max_retries=0`. The SDK defaults to 2 silent retries with exponential
     backoff, so one dead provider cost 3x its timeout before we even saw an error.
+    Retrying is done here instead, where it can rotate keys.
   * `response_format` support is probed once per (provider, model) and cached, so
     only the first call to a model that rejects JSON mode pays the retry.
+
+Failure handling, by error class:
+  401 / 403             the key is dead — mark it bad for this process, rotate.
+  429 / 5xx / timeout   transient — rotate key after a jittered exponential
+                        backoff, honouring Retry-After (capped).
+  404                   model not found — remember it, fall to the provider's
+                        other configured model if there is one.
+  400 about JSON mode   disable `response_format` for that model, retry.
+  finish_reason=length  output truncated — retry once with a larger max_tokens.
+
+Keys are never logged; logs and counters identify a key by its index.
 """
 
 import asyncio
-import itertools
+import email.utils
 import json
+import logging
 import os
-import re
+import random
 import time
-import traceback
 
 from openai import (
     APIConnectionError,
+    APIStatusError,
     APITimeoutError,
     AsyncOpenAI,
-    InternalServerError,
+    AuthenticationError,
+    BadRequestError,
+    NotFoundError,
+    PermissionDeniedError,
     RateLimitError,
 )
 
-TRANSIENT_ERRORS = (APITimeoutError, RateLimitError, APIConnectionError, InternalServerError)
+from agents.validation import failed_analysis
+from observability import incr
 
-MAX_ATTEMPTS = 2
+log = logging.getLogger("decisionx.llm")
+
+MAX_ATTEMPTS = 3
+BACKOFF_BASE = 0.5
+BACKOFF_CAP = 4.0
+RETRY_AFTER_CAP = 8.0
+MAX_TOKENS_CEILING = 4096
+_MIN_ATTEMPT_SECONDS = 2.0
+_sleep = asyncio.sleep  # indirection so tests can skip real backoff waits
 
 
 def load_keys(filename: str) -> list[str]:
@@ -48,9 +73,9 @@ def load_keys(filename: str) -> list[str]:
                 if key and not key.startswith("#"):
                     keys.append(key)
     except FileNotFoundError:
-        pass  
+        pass
     except Exception as e:
-        print(f"Warning: Could not load keys from {filename}: {e}")
+        log.warning("Could not load keys from %s: %s", filename, type(e).__name__)
     return keys
 
 
@@ -79,29 +104,41 @@ PROVIDERS = {
     },
 }
 
-_KEY_CURSORS = {name: itertools.cycle(cfg["keys"] or [None]) for name, cfg in PROVIDERS.items()}
-
+_KEY_CURSORS: dict[str, int] = {name: 0 for name in PROVIDERS}
+_BAD_KEYS: set[tuple[str, int]] = set()
+_MISSING_MODELS: set[tuple[str, str]] = set()
 _CLIENTS: dict[tuple[str, str], AsyncOpenAI] = {}
-
 _JSON_MODE_SUPPORT: dict[tuple[str, str], bool] = {}
 
-_JSON_MODE_REJECTIONS = (
-    "response_format",
-    "json_object",
-    "unsupported",
-    "not supported",
-    "unknown parameter",
-    "invalid parameter",
-)
+# Only these phrases mean "this endpoint does not do JSON mode". Generic words
+# like "unsupported" also appear in unrelated 400s and must not disable it.
+_JSON_MODE_REJECTIONS = ("response_format", "json_object", "json mode", "json_mode")
+# Groq: the model produced invalid JSON under JSON mode. Retry this call without
+# it, but do not disable JSON mode for the model.
+_JSON_MODE_GENERATION_FAILURE = ("json_validate_failed", "failed to generate json")
+
+
+class _Truncated(Exception):
+    pass
 
 
 def available_providers() -> list[str]:
-    """Providers that actually have at least one key loaded."""
-    return [name for name, cfg in PROVIDERS.items() if cfg["keys"]]
+    """Providers that have at least one key that has not been rejected."""
+    return [
+        name for name, cfg in PROVIDERS.items()
+        if any((name, i) not in _BAD_KEYS for i in range(len(cfg["keys"])))
+    ]
 
 
-def _next_key(provider: str) -> str | None:
-    return next(_KEY_CURSORS[provider])
+def _next_key(provider: str) -> tuple[int, str] | None:
+    """Round-robin over the provider's keys, skipping ones marked bad."""
+    keys = PROVIDERS[provider]["keys"]
+    for _ in range(len(keys)):
+        index = _KEY_CURSORS[provider] % len(keys)
+        _KEY_CURSORS[provider] = index + 1
+        if (provider, index) not in _BAD_KEYS:
+            return index, keys[index]
+    return None
 
 
 def _get_client(provider: str, api_key: str, timeout: float) -> AsyncOpenAI:
@@ -119,56 +156,180 @@ def _get_client(provider: str, api_key: str, timeout: float) -> AsyncOpenAI:
     return client
 
 
-def _extract_json(text: str) -> dict:
+# ── JSON extraction ─────────────────────────────────────────────────────────
+
+_DECODER = json.JSONDecoder(strict=False)  # strict=False: raw newlines inside strings
+_MAX_CANDIDATES = 200
+
+
+def _as_dict(value) -> dict | None:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, list) and len(value) == 1 and isinstance(value[0], dict):
+        return value[0]
+    return None
+
+
+def _fenced_blocks(text: str) -> list[str]:
+    blocks = []
+    parts = text.split("```")
+    for i in range(1, len(parts), 2):
+        block = parts[i]
+        first_newline = block.find("\n")
+        if first_newline != -1 and block[:first_newline].strip().isalpha():
+            block = block[first_newline + 1:]  # drop the language tag: ```json
+        blocks.append(block.strip())
+    return blocks
+
+
+def _extract_json(text: str, expect_keys: tuple[str, ...] = ()) -> dict:
     """
-    Robustly extract a JSON object from LLM output that may contain
-    markdown fences, preamble, or trailing commentary.
+    Robustly extract a JSON object from LLM output that may contain markdown
+    fences anywhere, preamble (including stray braces), or trailing commentary.
+
+    Tries the whole text, then every fenced block, then a decode starting at
+    every '{'. Only dicts count; a list holding exactly one dict is unwrapped.
+    With `expect_keys`, the first object containing one of them wins over an
+    earlier object that does not (e.g. an example in the preamble).
     """
-    if not text:
-        raise json.JSONDecodeError("Empty LLM response", "", 0)
+    if not text or not text.strip():
+        raise json.JSONDecodeError("Empty LLM response", text or "", 0)
 
-    if "```json" in text:
-        text = text.split("```json", 1)[1].split("```", 1)[0]
-    elif "```" in text:
-        text = text.split("```", 1)[1].split("```", 1)[0]
+    found: list[dict] = []
 
-    text = text.strip()
+    def consider(value) -> dict | None:
+        obj = _as_dict(value)
+        if obj is None:
+            return None
+        if not expect_keys or any(k in obj for k in expect_keys):
+            return obj
+        found.append(obj)
+        return None
 
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
+    for chunk in [text.strip(), *_fenced_blocks(text)]:
+        try:
+            hit = consider(_DECODER.decode(chunk))
+        except json.JSONDecodeError:
+            continue
+        if hit is not None:
+            return hit
 
-    match = re.search(r"\{", text)
-    if match:
-        depth = 0
-        start = match.start()
-        in_string = False
-        escaped = False
-        for i in range(start, len(text)):
-            ch = text[i]
-            if escaped:
-                escaped = False
-                continue
-            if ch == "\\":
-                escaped = True
-                continue
-            if ch == '"':
-                in_string = not in_string
-                continue
-            if in_string:
-                continue
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    try:
-                        return json.loads(text[start : i + 1])
-                    except json.JSONDecodeError:
-                        break
+    position = text.find("{")
+    tried = 0
+    while position != -1 and tried < _MAX_CANDIDATES:
+        tried += 1
+        try:
+            value, end = _DECODER.raw_decode(text, position)
+        except json.JSONDecodeError:
+            position = text.find("{", position + 1)
+            continue
+        hit = consider(value)
+        if hit is not None:
+            return hit
+        position = text.find("{", end)  # skip past the object we just read
 
+    if found:
+        return found[0]
     raise json.JSONDecodeError("No valid JSON object found in LLM output", text, 0)
+
+
+# ── Retry helpers ───────────────────────────────────────────────────────────
+
+def _retry_after_seconds(error: Exception) -> float | None:
+    response = getattr(error, "response", None)
+    headers = getattr(response, "headers", None)
+    if not headers:
+        return None
+    try:
+        ms = headers.get("retry-after-ms")
+        if ms:
+            return max(0.0, float(ms) / 1000.0)
+        value = headers.get("retry-after")
+        if not value:
+            return None
+        try:
+            return max(0.0, float(value))
+        except ValueError:
+            parsed = email.utils.parsedate_to_datetime(value)
+            return max(0.0, parsed.timestamp() - time.time())
+    except Exception:
+        return None
+
+
+def _backoff_seconds(attempt: int, error: Exception) -> float:
+    retry_after = _retry_after_seconds(error)
+    if retry_after is not None:
+        return min(RETRY_AFTER_CAP, retry_after)
+    ceiling = min(BACKOFF_CAP, BACKOFF_BASE * (2 ** attempt))
+    return random.uniform(ceiling / 2, ceiling)
+
+
+def _classify(error: Exception) -> str:
+    if isinstance(error, (AuthenticationError, PermissionDeniedError)):
+        return "auth"
+    if isinstance(error, RateLimitError):
+        return "rate_limit"
+    if isinstance(error, APITimeoutError):
+        return "timeout"
+    if isinstance(error, APIConnectionError):
+        return "connection"
+    if isinstance(error, NotFoundError):
+        return "not_found"
+    if isinstance(error, APIStatusError) and error.status_code >= 500:
+        return "server"
+    if isinstance(error, APIStatusError) and error.status_code == 408:
+        return "timeout"
+    return "other"
+
+
+_FRIENDLY = {
+    "auth": "rejected every API key",
+    "rate_limit": "is rate-limiting every key",
+    "timeout": "timed out",
+    "connection": "could not be reached",
+    "server": "returned a server error",
+    "not_found": "does not serve the configured model",
+    "truncated": "cut the answer off before it finished",
+    "bad_output": "returned output in an unexpected format",
+    "no_keys": "has no usable API keys",
+    "other": "rejected the request",
+}
+
+
+def _failure(provider: str, reason: str) -> dict:
+    incr(f"llm_failure_{reason}")
+    return failed_analysis(f"[{provider}] The model {_FRIENDLY.get(reason, 'failed')}.", reason)
+
+
+# ── Calls ───────────────────────────────────────────────────────────────────
+
+async def _complete(
+    provider: str,
+    key_index: int,
+    api_key: str,
+    model: str,
+    messages: list[dict],
+    max_tokens: int,
+    temperature: float,
+    timeout: float,
+    json_mode: bool,
+) -> str:
+    """One provider round-trip. Raises _Truncated when the output hit max_tokens."""
+    client = _get_client(provider, api_key, timeout)
+    kwargs = dict(
+        model=model,
+        messages=messages,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        timeout=timeout,
+    )
+    if json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
+    response = await client.chat.completions.create(**kwargs)
+    choice = response.choices[0]
+    if getattr(choice, "finish_reason", None) == "length":
+        raise _Truncated()
+    return choice.message.content or ""
 
 
 async def async_call_llm(
@@ -179,120 +340,137 @@ async def async_call_llm(
     max_tokens: int = 800,
     temperature: float = 0.7,
     timeout: float = 20.0,
+    expect_keys: tuple[str, ...] = (),
 ) -> dict:
     """
     Call the LLM using a rotating API key for the specified provider.
-    Returns the parsed JSON dictionary, or a fallback-shaped dict on failure.
+    `timeout` is the budget for the whole call, retries and backoff included.
+
+    Returns the parsed JSON dictionary, or a failed-analysis dict (`_failed`,
+    `_reason`) on failure. Never raises except for cancellation.
     """
     if provider not in PROVIDERS:
         provider = "openrouter"
-
     config = PROVIDERS[provider]
     if not config["keys"]:
-        return _fallback_response(
-            f"No API keys found for {provider}. Add them to backend/{provider}api (one per line)."
-        )
+        return _failure(provider, "no_keys")
 
-    use_model = model or config["default_model"]
+    models = [model or config["default_model"]]
+    for alt in (config["default_model"], config["strong_model"]):
+        if alt not in models:
+            models.append(alt)
+    models = [m for m in models if (provider, m) not in _MISSING_MODELS] or models[:1]
+    model_index = 0
+
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
     started = time.perf_counter()
+    deadline = started + timeout
+    tokens = max_tokens
+    truncation_retried = False
+    json_retry_without = False
+    last_reason = "other"
+    # Auth failures rotate immediately and do not consume a transient attempt.
+    transient_attempts = 0
+    max_rounds = MAX_ATTEMPTS + len(config["keys"]) + len(models) + 2
 
-    attempt_timeout = timeout / MAX_ATTEMPTS if len(config["keys"]) > 1 else timeout
-    last_error = "unknown error"
+    for _ in range(max_rounds):
+        remaining = deadline - time.perf_counter()
+        if remaining < _MIN_ATTEMPT_SECONDS:
+            last_reason = last_reason if last_reason != "other" else "timeout"
+            break
+        picked = _next_key(provider)
+        if picked is None:
+            last_reason = "auth"
+            break
+        key_index, api_key = picked
+        use_model = models[model_index]
+        json_mode = _JSON_MODE_SUPPORT.get((provider, use_model), True) and not json_retry_without
+        attempts_left = max(1, MAX_ATTEMPTS - transient_attempts)
+        attempt_timeout = remaining / attempts_left if len(config["keys"]) > 1 else remaining
+        attempt_timeout = max(_MIN_ATTEMPT_SECONDS, attempt_timeout)
+        where = f"{provider}/{use_model} key#{key_index}"
 
-    for attempt in range(MAX_ATTEMPTS):
-        client = _get_client(provider, _next_key(provider), attempt_timeout)
+        try:
+            content = await _complete(
+                provider, key_index, api_key, use_model, messages,
+                tokens, temperature, attempt_timeout, json_mode,
+            )
+            parsed = _extract_json(content, expect_keys)
+            log.info("%s ok in %.1fs", where, time.perf_counter() - started)
+            return parsed
 
-        json_modes = [True, False] if _JSON_MODE_SUPPORT.get((provider, use_model), True) else [False]
+        except asyncio.CancelledError:
+            raise
 
-        for use_json_mode in json_modes:
-            try:
-                kwargs = dict(
-                    model=use_model,
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    timeout=attempt_timeout,
-                )
-                if use_json_mode:
-                    kwargs["response_format"] = {"type": "json_object"}
+        except _Truncated:
+            incr("llm_truncated")
+            if truncation_retried or tokens >= MAX_TOKENS_CEILING:
+                log.warning("%s output truncated at max_tokens=%d — giving up", where, tokens)
+                return _failure(provider, "truncated")
+            truncation_retried = True
+            tokens = min(MAX_TOKENS_CEILING, int(tokens * 1.6) + 64)
+            log.info("%s output truncated — retrying with max_tokens=%d", where, tokens)
+            continue
 
-                response = await client.chat.completions.create(**kwargs)
-                parsed = _extract_json(response.choices[0].message.content)
-                print(f"[LLM] {provider}/{use_model} ok in {time.perf_counter() - started:.1f}s")
-                return parsed
+        except json.JSONDecodeError:
+            if json_mode:
+                json_retry_without = True
+                continue
+            log.warning("%s returned unparseable output after %.1fs", where, time.perf_counter() - started)
+            return _failure(provider, "bad_output")
 
-            except json.JSONDecodeError:
-                if use_json_mode:
-                    continue  
-                return _fallback_response(
-                    f"[{provider}] Analysis completed but output format was unexpected."
-                )
+        except Exception as e:  # noqa: BLE001 — classified below, never re-raised
+            reason = _classify(e)
+            last_reason = reason
+            elapsed = time.perf_counter() - started
+            message = str(e).lower()
 
-            except asyncio.CancelledError:
-                raise
-
-            except TRANSIENT_ERRORS as e:
-                last_error = f"{type(e).__name__}: {str(e)[:110]}"
-                print(
-                    f"[LLM] {provider}/{use_model} transient failure "
-                    f"({type(e).__name__}) at {time.perf_counter() - started:.1f}s — "
-                    f"{'retrying on another key' if attempt + 1 < MAX_ATTEMPTS else 'giving up'}"
-                )
-                break  
-
-            except Exception as e:
-                err_msg = str(e).lower()
-                if use_json_mode and any(kw in err_msg for kw in _JSON_MODE_REJECTIONS):
+            if json_mode and isinstance(e, BadRequestError):
+                if any(k in message for k in _JSON_MODE_REJECTIONS):
                     _JSON_MODE_SUPPORT[(provider, use_model)] = False
-                    print(f"[LLM] {provider}/{use_model} rejects response_format — disabling it")
+                    log.info("%s rejects response_format — disabling JSON mode for it", where)
                     continue
-                print(
-                    f"[LLM] {provider}/{use_model} failed after "
-                    f"{time.perf_counter() - started:.1f}s: {str(e)[:160]}"
-                )
-                return _fallback_response(f"[{provider}] Agent error: {str(e)[:120]}")
+                if any(k in message for k in _JSON_MODE_GENERATION_FAILURE):
+                    json_retry_without = True
+                    continue
 
-    return _fallback_response(f"[{provider}] Agent error: {last_error}")
+            if reason == "auth":
+                _BAD_KEYS.add((provider, key_index))
+                incr("llm_key_disabled")
+                log.warning("%s rejected (HTTP %s) — key disabled for this process",
+                            where, getattr(e, "status_code", "?"))
+                continue
 
+            if reason == "not_found":
+                _MISSING_MODELS.add((provider, use_model))
+                if model_index + 1 < len(models):
+                    model_index += 1
+                    log.warning("%s model not found — falling back to %s", where, models[model_index])
+                    continue
+                log.warning("%s model not found and no fallback model left", where)
+                break
 
-async def async_call_llm_text(
-    system_prompt: str,
-    user_prompt: str,
-    provider: str,
-    model: str | None = None,
-    max_tokens: int = 400,
-    temperature: float = 0.7,
-    timeout: float = 20.0,
-) -> str:
-    """Same as async_call_llm but returns raw text. Returns "" on failure."""
-    config = PROVIDERS.get(provider)
-    if not config or not config["keys"]:
-        return ""
+            if reason in ("rate_limit", "timeout", "connection", "server"):
+                transient_attempts += 1
+                incr(f"llm_transient_{reason}")
+                if transient_attempts >= MAX_ATTEMPTS:
+                    log.warning("%s %s at %.1fs — giving up", where, reason, elapsed)
+                    break
+                delay = min(_backoff_seconds(transient_attempts - 1, e),
+                            max(0.0, deadline - time.perf_counter() - _MIN_ATTEMPT_SECONDS))
+                log.info("%s %s at %.1fs — rotating key after %.1fs", where, reason, elapsed, delay)
+                if delay > 0:
+                    await _sleep(delay)
+                continue
 
-    api_key = _next_key(provider)
-    client = _get_client(provider, api_key, timeout)
+            log.warning("%s failed after %.1fs: %s (HTTP %s)", where, elapsed,
+                        type(e).__name__, getattr(e, "status_code", "-"))
+            break
 
-    try:
-        response = await client.chat.completions.create(
-            model=model or config["default_model"],
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=max_tokens,
-            temperature=temperature,
-            timeout=timeout,
-        )
-        return response.choices[0].message.content or ""
-    except asyncio.CancelledError:
-        raise
-    except Exception as e:
-        print(f"[LLM] text call to {provider} failed: {str(e)[:160]}")
-        return ""
+    return _failure(provider, last_reason)
 
 
 async def close_clients() -> None:
@@ -301,17 +479,10 @@ async def close_clients() -> None:
         try:
             await client.close()
         except Exception:
-            traceback.print_exc()
+            log.exception("Error closing LLM client")
     _CLIENTS.clear()
 
 
 def _fallback_response(headline: str) -> dict:
-    return {
-        "verdict": "Cautious",
-        "score": 5,
-        "headline": headline,
-        "strengths": [],
-        "concerns": ["Unable to complete analysis — please retry."],
-        "recommendation": "Retry the evaluation.",
-        "_failed": True,
-    }
+    """Kept for backwards compatibility — see validation.failed_analysis."""
+    return failed_analysis(headline)

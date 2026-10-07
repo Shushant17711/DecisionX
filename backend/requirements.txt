@@ -1,9 +1,11 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.0
-python-dotenv==1.0.1
-openai>=1.55.0
-httpx>=0.27.0
-pandas==2.2.2
-openpyxl==3.1.5
-pdfplumber==0.11.2
-python-multipart==0.0.9
+# Runtime dependencies. Ranges are bounded to tested major versions and resolve
+# to wheels on CPython 3.12–3.14. Test deps live in requirements-dev.txt.
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+python-dotenv>=1.0.1,<2
+# chat.completions + typed errors (AuthenticationError, RateLimitError, ...);
+# only APIs present since 1.55 are used; tested with 3.26.
+openai>=1.55,<4
+openpyxl>=3.1.5,<4
+pdfplumber>=0.11.4,<0.12
+python-multipart>=0.0.18

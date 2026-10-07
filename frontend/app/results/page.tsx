@@ -18,6 +18,7 @@ import {
   resetEvaluation,
   subscribe,
 } from "@/lib/evaluation";
+import { isEditableTarget } from "@/lib/dom";
 import { getEntry } from "@/lib/history";
 import { getNote } from "@/lib/notes";
 import { personaRole, personaStatus, roleLens, tallyRoles, type RoleId, type StatusId } from "@/lib/roles";
@@ -255,6 +256,8 @@ function ResultsView() {
   const params = useSearchParams();
   const historyId = params.get("id");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const openHistory = useCallback(() => setHistoryOpen(true), []);
+  const closeHistory = useCallback(() => setHistoryOpen(false), []);
 
   const [role, setRole] = useState<RoleId | "all">("all");
   const [status, setStatus] = useState<StatusId | "all">("all");
@@ -263,11 +266,23 @@ function ResultsView() {
   const notFound = state.status === "missing";
 
   useEffect(() => {
-    if (historyId) loadFromHistory(historyId);
-  }, [historyId]);
+    if (!historyId) return;
+    // False when a run is live and the reader chose to keep it: drop the id so
+    // the address bar matches what is on screen.
+    if (!loadFromHistory(historyId)) router.replace("/results", { scroll: false });
+  }, [historyId, router]);
+
+  /* A finished live run gets its permanent address, so a refresh reopens it
+     from history instead of landing on an empty page. */
+  useEffect(() => {
+    if (!historyId && state.status === "done" && state.historyId) {
+      router.replace(`/results?id=${encodeURIComponent(state.historyId)}`, { scroll: false });
+    }
+  }, [historyId, state.status, state.historyId, router]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target) || isEditableTarget(document.activeElement)) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setHistoryOpen((v) => !v);
@@ -322,6 +337,17 @@ function ResultsView() {
 
   const entry = state.historyId ? getEntry(state.historyId) : undefined;
 
+  const progressMessage =
+    state.status === "running"
+      ? state.stage === "assembling"
+        ? "Assembling the panel around this idea…"
+        : state.stage === "synthesizing"
+          ? "All verdicts in. Reconciling where the experts disagree…"
+          : `Hearing the panel — ${done} of ${total} ${done === 1 ? "verdict" : "verdicts"} in.`
+      : state.status === "done"
+        ? "Evaluation complete."
+        : "";
+
   const boardCharts = useMemo(
     () => [synthesis?.score_chart, ...(synthesis?.charts ?? [])].filter(Boolean) as Chart[],
     [synthesis],
@@ -335,7 +361,7 @@ function ResultsView() {
   /* Nothing to show — direct navigation to /results with no run and no id. */
   if (state.status === "idle" && !historyId) {
     return (
-      <Shell onOpenHistory={() => setHistoryOpen(true)} historyOpen={historyOpen} onCloseHistory={() => setHistoryOpen(false)}>
+      <Shell onOpenHistory={openHistory} historyOpen={historyOpen} onCloseHistory={closeHistory}>
         <div className="py-28 text-center">
           <h2 className="text-[1.25rem]">No evaluation loaded</h2>
           <p className="mx-auto mt-3 max-w-[42ch] text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
@@ -346,7 +372,7 @@ function ResultsView() {
               Evaluate an idea
             </button>
             <button
-              onClick={() => setHistoryOpen(true)}
+              onClick={openHistory}
               className="btn-quiet px-5 py-2.5 text-[0.875rem]"
             >
               Open history
@@ -359,7 +385,7 @@ function ResultsView() {
 
   if (notFound) {
     return (
-      <Shell onOpenHistory={() => setHistoryOpen(true)} historyOpen={historyOpen} onCloseHistory={() => setHistoryOpen(false)}>
+      <Shell onOpenHistory={openHistory} historyOpen={historyOpen} onCloseHistory={closeHistory}>
         <div className="py-28 text-center">
           <h2 className="text-[1.25rem]">That evaluation is not on this device</h2>
           <p className="mx-auto mt-3 max-w-[46ch] text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
@@ -376,9 +402,9 @@ function ResultsView() {
 
   return (
     <Shell
-      onOpenHistory={() => setHistoryOpen(true)}
+      onOpenHistory={openHistory}
       historyOpen={historyOpen}
-      onCloseHistory={() => setHistoryOpen(false)}
+      onCloseHistory={closeHistory}
       activeId={state.historyId}
       onNew={startNew}
       actions={
@@ -400,6 +426,11 @@ function ResultsView() {
         )
       }
     >
+      {/* Announces run progress to screen readers; always mounted so changes are heard. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {progressMessage}
+      </p>
+
       {/* ── The brief ── */}
       <section className="pt-10">
         <div 
@@ -464,6 +495,7 @@ function ResultsView() {
       {state.status === "error" && (
         <section className="mt-8">
           <div
+            role="alert"
             className="panel p-6"
             style={{ borderColor: "oklch(62% 0.17 27 / 0.4)", background: "var(--vermilion-dim)" }}
           >
@@ -525,7 +557,9 @@ function ResultsView() {
                     {synthesis.verdict}
                   </span>
                   <span className="tnum text-[0.8125rem] text-[var(--text-muted)]">
-                    {synthesis.consensus_percentage}% agreement across {state.personas.length} experts
+                    {synthesis.consensus_percentage != null
+                      ? `${synthesis.consensus_percentage}% agreement across ${state.personas.length} experts`
+                      : `${state.personas.length} experts`}
                   </span>
                 </div>
                 <p className="measure mt-4 text-[1.0625rem] leading-relaxed text-[var(--foreground)]">
@@ -546,16 +580,13 @@ function ResultsView() {
       ) : state.status === "running" ? (
         <section className="mt-10">
           <div className="panel awaiting relative p-6 md:p-8">
-            <p className="text-[0.9375rem] text-[var(--text-secondary)]">
-              {state.stage === "assembling"
-                ? "Assembling the panel around this idea…"
-                : state.stage === "synthesizing"
-                  ? "All verdicts in. Reconciling where the experts disagree…"
-                  : `Hearing the panel — ${done} of ${total} ${done === 1 ? "verdict" : "verdicts"} in.`}
+            <p className="text-[0.9375rem] text-[var(--text-secondary)]" aria-hidden="true">
+              {progressMessage}
             </p>
             <div
               className="mt-4 h-px w-full bg-[var(--border-subtle)]"
               role="progressbar"
+              aria-label="Verdicts received"
               aria-valuemin={0}
               aria-valuemax={total || 1}
               aria-valuenow={done}

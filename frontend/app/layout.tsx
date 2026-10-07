@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Albert_Sans, IBM_Plex_Mono } from "next/font/google";
+import { StorageNotice } from "@/components/StorageNotice";
 import "./globals.css";
 
 // Albert Sans for wordmark; IBM Plex Mono reserved for measurement.
@@ -32,7 +33,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="decisionx">
-      <body className={`${albert.variable} ${plexMono.variable} min-h-dvh`}>{children}</body>
+      <body className={`${albert.variable} ${plexMono.variable} min-h-dvh`}>
+        {children}
+        <StorageNotice />
+      </body>
     </html>
   );
 }

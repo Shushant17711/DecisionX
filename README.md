@@ -452,10 +452,12 @@ DecisionX/
 │   └── ...
 │
 ├── backend/
-│   ├── agents/
-│   ├── services/
-│   ├── models/
-│   ├── main.py
+│   ├── agents/          # personas, orchestrator, synthesizer, LLM client, context budget
+│   ├── parsers/         # upload extraction (isolated parse worker)
+│   ├── tests/           # pytest suite (LLM stubbed); tests/integration/ = live calls
+│   ├── main.py          # FastAPI app, request guard, endpoints
+│   ├── config.py        # every DECISIONX_* setting
+│   ├── .env.example
 │   ├── groqapi
 │   ├── nvidiaapi
 │   ├── openrouterapi
@@ -639,6 +641,39 @@ Potential configuration parameters include:
 
 The panel size can be increased up to **30 experts**, allowing users to trade off between evaluation breadth and execution cost.
 
+### Backend environment
+
+The backend reads `DECISIONX_*` variables from the environment, or from `backend/.env` (a real environment variable wins). Provider keys are **not** read from `.env`; they live in the key files above. See `backend/.env.example` for the annotated list.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `DECISIONX_HOST` | `127.0.0.1` | Bind address (`python main.py`, `start_dev.*`) |
+| `DECISIONX_PORT` | `8001` | Port for `python main.py` |
+| `DECISIONX_ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | `/api/evaluate*` returns 403 when an `Origin` header is present and not listed |
+| `DECISIONX_API_TOKEN` | unset | If set, `/api/evaluate*` requires header `X-DecisionX-Token` (401 otherwise) |
+| `DECISIONX_MAX_CONCURRENT_AGENTS` | `12` | Persona LLM calls in flight across all evaluations |
+| `DECISIONX_RUN_TIMEOUT` | `120` | Seconds per evaluation; slow experts are reported as timed out |
+| `DECISIONX_CONTEXT_BUDGET_CHARS` | `6000` | Context + documents each expert sees (synthesizer ½, architect ¼), split fairly per file |
+| `DECISIONX_PARSE_TIMEOUT` | `20` | Seconds per uploaded file |
+| `DECISIONX_PARSER_ISOLATION` | `subprocess` | `subprocess` (killable, memory-capped) or `thread` |
+| `DECISIONX_PARSE_MEMORY_MB` | `1024` | Memory cap for the parse worker (POSIX) |
+| `DECISIONX_LOG_LEVEL` | `INFO` | Logging level |
+
+Request limits: idea ≤ 4,000 characters, typed context ≤ 12,000, `num_personas` 1–30, ≤ 8 files of ≤ 10 MB each and 40 MB in total. Uploads accept PDF, DOCX, XLSX, CSV and plain text; legacy `.xls`/`.doc` are rejected with a message. Uploaded text is passed to the experts inside delimiters marked as untrusted reference material, and each attachment in the result reports `included`, `truncated`, `chars_extracted` and `chars_included`.
+
+If you bind beyond loopback (`DECISIONX_HOST=0.0.0.0`), set `DECISIONX_API_TOKEN` — otherwise anyone who can reach the port can spend your LLM quota.
+
+`GET /api/health` reports configured providers and process-local failure counters (rejected requests, persona failures/timeouts, LLM failure reasons, upload errors). Every evaluation gets a request id, returned as `X-Request-ID` and attached to its log lines; API keys are never logged, only their index in the key file.
+
+### Backend tests
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest            # LLM calls are stubbed; no network
+DECISIONX_LIVE_TESTS=1 python -m pytest tests/integration   # real provider call
+```
+
 ---
 
 # 🐛 Troubleshooting
@@ -684,14 +719,9 @@ should contain only the API key.
 
 ### Port already in use
 
-The development scripts attempt to stop existing processes using ports:
+The development scripts check ports `3000` and `8001` before starting. If either is taken, they print which process holds it and exit rather than killing it — stop that process (often a previous dev server) and run the script again.
 
-```text
-3000
-8001
-```
-
-If the problem persists, manually stop the process occupying the port and restart the application.
+The scripts also reinstall backend requirements automatically whenever `backend/requirements.txt` changes.
 
 ---
 

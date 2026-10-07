@@ -19,7 +19,8 @@ export interface Chart {
 
 export interface PersonaAnalysis {
   verdict: string;
-  score: number;
+  /** 1–10, or null when the model returned nothing readable (see lib/validate.ts). */
+  score: number | null;
   headline: string;
   strengths: string[];
   concerns: string[];
@@ -51,7 +52,8 @@ export interface Disagreement {
 }
 
 export interface Synthesis {
-  overall_score: number;
+  /** 1–10, or null when no score could be read. */
+  overall_score: number | null;
   verdict: string;
   executive_summary: string;
   consensus_points: string[];
@@ -63,7 +65,8 @@ export interface Synthesis {
   action_plan_7_days: string[];
   action_plan_30_days: string[];
   final_recommendation: string;
-  consensus_percentage: number;
+  /** 0–100, or null when the synthesizer omitted it. */
+  consensus_percentage: number | null;
   agent_scores: Record<string, number>;
   failed_agents?: string[];
   /** True when no expert could be reached — the score is a fallback, not a verdict. */
@@ -80,6 +83,8 @@ export interface Attachment {
   included: boolean;
   truncated?: boolean;
   error?: string;
+  /** Characters of extracted text actually given to the panel, when reported. */
+  chars_included?: number;
 }
 
 export interface EvalResult {
@@ -87,7 +92,8 @@ export interface EvalResult {
   detected_domains: string[];
   selected_experts: { name: string; icon: string; role: string; color: string }[];
   personas: PersonaResult[];
-  synthesis: Synthesis;
+  /** Absent only when the backend returned no readable synthesis. */
+  synthesis?: Synthesis;
   elapsed_seconds?: number;
   attachments?: Attachment[];
 }

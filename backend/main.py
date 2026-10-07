@@ -8,42 +8,122 @@ Two evaluation endpoints share one pipeline:
 The stream exists for perceived performance. The panel is known within
 milliseconds and each expert's verdict lands as it finishes, so the results page
 renders immediately instead of after the slowest agent plus synthesis.
+
+Exposure: the server binds to 127.0.0.1 by default. /api/evaluate* refuses
+requests whose Origin is not in DECISIONX_ALLOWED_ORIGINS, enforces an optional
+shared token (DECISIONX_API_TOKEN → header X-DecisionX-Token), and caps the
+request body before any of it is parsed. See config.py for every setting.
 """
 
 import asyncio
+import hmac
 import json
-import os
-import traceback
-from contextlib import asynccontextmanager
+import logging
+from contextlib import aclosing, asynccontextmanager
 
-from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+import config  # loads backend/.env before anything reads the environment
+from observability import incr, new_request_id, request_id_var, setup_logging, snapshot
 
-load_dotenv()
+setup_logging(config.LOG_LEVEL)
 
-from agents.llm_client import available_providers, close_clients
-from agents.orchestrator import evaluate_idea, evaluate_idea_stream
-from agents.personas import MAX_PANEL_SIZE
-from parsers.file_parser import extract_text_from_files
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
+
+from agents.context import ContextBundle, annotate_manifest  # noqa: E402
+from agents.llm_client import available_providers, close_clients  # noqa: E402
+from agents.orchestrator import evaluate_idea, evaluate_idea_stream  # noqa: E402
+from agents.personas import MAX_PANEL_SIZE  # noqa: E402
+from agents.validation import json_safe  # noqa: E402
+from parsers.file_parser import MAX_TOTAL_UPLOAD_BYTES, extract_documents  # noqa: E402
+
+log = logging.getLogger("decisionx.api")
 
 MAX_UPLOAD_FILES = 8
+MAX_IDEA_CHARS = 4000
+MAX_CONTEXT_CHARS = 12000
+# Whole multipart body: every upload plus the form fields and multipart overhead.
+MAX_REQUEST_BYTES = MAX_TOTAL_UPLOAD_BYTES + 1024 * 1024
+
+_GUARDED_PREFIX = "/api/evaluate"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     providers = available_providers()
     if providers:
-        print(f"LLM providers ready: {', '.join(providers)}")
+        log.info("LLM providers ready: %s", ", ".join(providers))
     else:
-        print(
-            "WARNING: no LLM API keys found. Add one key per line to "
+        log.warning(
+            "No LLM API keys found. Add one key per line to "
             "backend/groqapi, backend/nvidiaapi, or backend/openrouterapi."
         )
-    print("DecisionX API ready at http://localhost:8001")
+    if config.HOST not in ("127.0.0.1", "localhost", "::1") and not config.API_TOKEN:
+        log.warning("Listening on %s without DECISIONX_API_TOKEN — anyone who can reach "
+                    "this port can spend your LLM quota.", config.HOST)
+    log.info("DecisionX API ready (allowed origins: %s)", ", ".join(config.ALLOWED_ORIGINS))
     yield
     await close_clients()
+
+
+class RequestGuard:
+    """
+    Pure-ASGI gate for /api/evaluate*. Runs before the body is read, so a
+    rejected request never gets its uploads spooled to disk.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope["type"] != "http"
+            or not scope["path"].startswith(_GUARDED_PREFIX)
+            or scope["method"] == "OPTIONS"  # CORS preflight — CORSMiddleware answers it
+        ):
+            return await self.app(scope, receive, send)
+
+        headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]}
+
+        origin = headers.get("origin")
+        if origin is not None and origin.rstrip("/") not in config.ALLOWED_ORIGINS:
+            incr("rejected_origin")
+            log.warning("rejected request from origin %r", origin[:100])
+            return await _reject(scope, receive, send, 403, "Origin not allowed")
+
+        if config.API_TOKEN:
+            supplied = headers.get("x-decisionx-token", "")
+            if not hmac.compare_digest(supplied.encode(), config.API_TOKEN.encode()):
+                incr("rejected_token")
+                return await _reject(scope, receive, send, 401, "Missing or invalid X-DecisionX-Token")
+
+        limit_mb = MAX_REQUEST_BYTES // (1024 * 1024)
+        try:
+            declared = int(headers.get("content-length", "0"))
+        except ValueError:
+            declared = 0
+        if declared > MAX_REQUEST_BYTES:
+            incr("rejected_too_large")
+            return await _reject(scope, receive, send, 413, f"Request exceeds the {limit_mb}MB upload limit")
+
+        received = 0
+
+        async def limited_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > MAX_REQUEST_BYTES:
+                    incr("rejected_too_large")
+                    raise HTTPException(413, f"Request exceeds the {limit_mb}MB upload limit")
+            return message
+
+        return await self.app(scope, limited_receive, send)
+
+
+async def _reject(scope, receive, send, status: int, detail: str) -> None:
+    response = JSONResponse({"detail": detail}, status_code=status)
+    await response(scope, receive, send)
 
 
 app = FastAPI(
@@ -53,12 +133,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Added first so CORS (added last) is outermost: rejections still carry CORS
+# headers for allowed origins, so the frontend can read the error detail.
+app.add_middleware(RequestGuard)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=config.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 
@@ -69,24 +153,48 @@ async def health_check():
         "service": "DecisionX API",
         "providers": available_providers(),
         "max_panel_size": MAX_PANEL_SIZE,
+        "counters": snapshot(),
     }
 
 
-async def _build_context(context: str, files: list[UploadFile] | None) -> tuple[str, list[dict]]:
-    """Merge typed context with text extracted from every uploaded document."""
-    if not files:
-        return context, []
+def _validate(idea: str, context: str, num_personas: int, files: list[UploadFile] | None):
+    """Return (idea, context, panel_size, real_files) or raise a 422 with a readable detail."""
+    idea = (idea or "").strip()
+    context = (context or "").strip()
+    if not idea:
+        raise HTTPException(422, "Describe the idea to evaluate.")
+    if len(idea) > MAX_IDEA_CHARS:
+        raise HTTPException(422, f"The idea is {len(idea)} characters; the limit is {MAX_IDEA_CHARS}.")
+    if len(context) > MAX_CONTEXT_CHARS:
+        raise HTTPException(
+            422, f"The context is {len(context)} characters; the limit is {MAX_CONTEXT_CHARS}. "
+                 "Attach longer material as a file instead."
+        )
+    if not 1 <= num_personas <= MAX_PANEL_SIZE:
+        raise HTTPException(422, f"num_personas must be between 1 and {MAX_PANEL_SIZE}.")
+    real_files = [f for f in (files or []) if f and f.filename]
+    if len(real_files) > MAX_UPLOAD_FILES:
+        raise HTTPException(422, f"At most {MAX_UPLOAD_FILES} files can be attached.")
+    return idea, context, num_personas, real_files
 
-    real_files = [f for f in files if f and f.filename][:MAX_UPLOAD_FILES]
-    if not real_files:
-        return context, []
 
-    extracted, manifest = await extract_text_from_files(real_files)
-    if not extracted:
-        return context, manifest
+async def _build_context(context: str, files: list[UploadFile]) -> tuple[ContextBundle, list[dict]]:
+    """Typed context plus every uploaded document, and a manifest that says how
+    much of each document actually reaches the expert prompts."""
+    documents, manifest = await extract_documents(files) if files else ([], [])
+    bundle = ContextBundle(typed=context, documents=documents)
+    return bundle, annotate_manifest(manifest, bundle)
 
-    merged = f"{context}\n\n{extracted}" if context else extracted
-    return merged, manifest
+
+def _ndjson(event: dict) -> str:
+    return json.dumps(json_safe(event), allow_nan=False) + "\n"
+
+
+def _start_request() -> str:
+    request_id = new_request_id()
+    request_id_var.set(request_id)
+    incr("evaluations_started")
+    return request_id
 
 
 @app.post("/api/evaluate")
@@ -97,15 +205,31 @@ async def evaluate(
     files: list[UploadFile] = File(default=[]),
 ):
     """Evaluate an idea through a dynamically assembled expert panel (blocking)."""
+    idea, context, panel_size, real_files = _validate(idea, context, num_personas, files)
+    request_id = _start_request()
+    headers = {"X-Request-ID": request_id}
     try:
-        full_context, manifest = await _build_context(context, files)
-        panel_size = max(1, min(MAX_PANEL_SIZE, num_personas))
-        result = await evaluate_idea(idea, full_context, max_agents=panel_size)
+        bundle, manifest = await _build_context(context, real_files)
+        result = await asyncio.wait_for(
+            evaluate_idea(idea, bundle, max_agents=panel_size),
+            timeout=config.RUN_TIMEOUT + 30,
+        )
         result["attachments"] = manifest
-        return JSONResponse(content=result)
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        incr("evaluations_completed")
+        return JSONResponse(content=json_safe(result), headers=headers)
+    except (asyncio.TimeoutError, TimeoutError):
+        incr("evaluations_timed_out")
+        log.error("evaluation exceeded the run deadline")
+        raise HTTPException(504, f"Evaluation timed out (request {request_id}).", headers=headers)
+    except asyncio.CancelledError:
+        incr("client_disconnects")
+        raise
+    except HTTPException:
+        raise
+    except Exception:
+        incr("evaluations_failed")
+        log.exception("evaluation failed")
+        raise HTTPException(500, f"Evaluation failed — see server logs (request {request_id}).", headers=headers)
 
 
 @app.post("/api/evaluate/stream")
@@ -117,38 +241,49 @@ async def evaluate_stream(
 ):
     """
     Same pipeline as /api/evaluate, delivered as newline-delimited JSON.
-    Each line is one event: stage | panel | persona | done | error.
+    Each line is one event: attachments | stage | panel | persona | done | error.
     """
+    idea, context, panel_size, real_files = _validate(idea, context, num_personas, files)
+    request_id = _start_request()
     try:
-        full_context, manifest = await _build_context(context, files)
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=400, detail=f"Could not read attachments: {e}")
-
-    panel_size = max(1, min(MAX_PANEL_SIZE, num_personas))
+        bundle, manifest = await _build_context(context, real_files)
+    except Exception:
+        incr("evaluations_failed")
+        log.exception("could not read attachments")
+        raise HTTPException(400, f"Could not read attachments (request {request_id}).")
 
     async def event_stream():
+        request_id_var.set(request_id)
+        finished = False
         try:
             if manifest:
-                yield json.dumps({"type": "attachments", "attachments": manifest}) + "\n"
+                yield _ndjson({"type": "attachments", "attachments": manifest})
 
-            async for event in evaluate_idea_stream(idea, full_context, panel_size):
-                if event["type"] == "done":
-                    event["result"]["attachments"] = manifest
-                yield json.dumps(event) + "\n"
+            async with aclosing(evaluate_idea_stream(idea, bundle, panel_size)) as stream:
+                async for event in stream:
+                    if event["type"] == "done":
+                        event["result"]["attachments"] = manifest
+                        finished = True
+                    yield _ndjson(event)
+            incr("evaluations_completed")
 
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, GeneratorExit):
+            if not finished:
+                incr("client_disconnects")
+                log.info("client disconnected — evaluation cancelled")
             raise
-        except Exception as e:
-            traceback.print_exc()
-            yield json.dumps({"type": "error", "message": str(e)[:300]}) + "\n"
+        except Exception:
+            incr("evaluations_failed")
+            log.exception("evaluation stream failed")
+            yield _ndjson({"type": "error", "message": f"Evaluation failed — see server logs (request {request_id})."})
 
     return StreamingResponse(
         event_stream(),
         media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-cache, no-transform",
-            "X-Accel-Buffering": "no",  
+            "X-Accel-Buffering": "no",
+            "X-Request-ID": request_id,
         },
     )
 
@@ -156,4 +291,4 @@ async def evaluate_stream(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run("main:app", host=config.HOST, port=config.PORT, reload=True)

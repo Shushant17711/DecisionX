@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { ArchitectureDiagram } from "@/components/ArchitectureDiagram";
 import { BriefChecklist } from "@/components/BriefChecklist";
@@ -23,6 +23,7 @@ import {
   updateDraft,
   type BriefField,
 } from "@/lib/brief";
+import { isEditableTarget } from "@/lib/dom";
 import { startEvaluation } from "@/lib/evaluation";
 import { FEATURED_SAMPLE_ID, seedSamples } from "@/lib/samples";
 
@@ -39,6 +40,8 @@ export default function HomePage() {
   const draft = useSyncExternalStore(subscribeDraft, getDraft, getDraftServerSnapshot);
   const [files, setFiles] = useState<File[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const openHistory = useCallback(() => setHistoryOpen(true), []);
+  const closeHistory = useCallback(() => setHistoryOpen(false), []);
   const [sampleState, setSampleState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
 
   const ideaRef = useRef<HTMLTextAreaElement>(null);
@@ -49,6 +52,8 @@ export default function HomePage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Never steal ⌘/Ctrl+K from the brief's text fields.
+      if (isEditableTarget(e.target) || isEditableTarget(document.activeElement)) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setHistoryOpen((v) => !v);
@@ -103,11 +108,11 @@ export default function HomePage() {
 
   return (
     <div className="relative z-[1] min-h-dvh">
-      <HistorySidebar open={historyOpen} onClose={() => setHistoryOpen(false)} />
+      <HistorySidebar open={historyOpen} onClose={closeHistory} />
 
       <nav className="mx-auto flex max-w-[76rem] items-center justify-between px-6 py-5 md:px-10">
         <span className="wordmark">DecisionX</span>
-        <HistoryToggle onClick={() => setHistoryOpen(true)} />
+        <HistoryToggle onClick={openHistory} />
       </nav>
 
       <main className="mx-auto max-w-[76rem] px-6 md:px-10">

@@ -202,8 +202,16 @@ export function saveDraft(draft: BriefDraft) {
   }
 }
 
+/** Forget the draft — both the stored copy and the in-memory one, including any pending write. */
 export function clearDraft() {
   if (typeof window === "undefined") return;
+  if (writeHandle != null) {
+    window.clearTimeout(writeHandle);
+    writeHandle = null;
+  }
+  pendingDraft = null;
+  cache = EMPTY_DRAFT;
+  listeners.forEach((l) => l());
   try {
     window.localStorage.removeItem(DRAFT_KEY);
   } catch {
@@ -220,6 +228,8 @@ export function clearDraft() {
 const listeners = new Set<() => void>();
 let cache: BriefDraft | null = null;
 let writeHandle: number | null = null;
+/** The latest draft not yet written to storage. */
+let pendingDraft: BriefDraft | null = null;
 
 export function getDraft(): BriefDraft {
   if (typeof window === "undefined") return EMPTY_DRAFT;
@@ -242,11 +252,31 @@ function commit(next: BriefDraft) {
   listeners.forEach((l) => l());
 
   if (typeof window === "undefined") return;
+  pendingDraft = next;
   if (writeHandle != null) window.clearTimeout(writeHandle);
-  writeHandle = window.setTimeout(() => {
+  writeHandle = window.setTimeout(flushDraft, 400);
+}
+
+/** Write any debounced draft now — used when the page is going away. */
+export function flushDraft() {
+  if (typeof window === "undefined") return;
+  if (writeHandle != null) {
+    window.clearTimeout(writeHandle);
     writeHandle = null;
-    saveDraft(next);
-  }, 400);
+  }
+  const draft = pendingDraft;
+  pendingDraft = null;
+  if (draft) saveDraft(draft);
+}
+
+/* A tab closed or navigated away within the debounce window must not lose the
+   last keystrokes. `pagehide` covers unload and bfcache; a hidden tab may be
+   discarded without either, so flush on that too. */
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flushDraft);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushDraft();
+  });
 }
 
 export function updateDraft(patch: Partial<BriefDraft>) {

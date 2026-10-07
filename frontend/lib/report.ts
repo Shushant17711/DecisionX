@@ -39,10 +39,27 @@ export function formatDate(ts: number): string {
   });
 }
 
+/**
+ * A number for display, or "—" when there is none. Everything numeric that is
+ * interpolated into a report goes through here, so a stored string or NaN can
+ * never reach the HTML unescaped or print as "NaN".
+ */
+export function formatNumber(value: unknown): string {
+  if (value == null || value === "") return "—";
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? String(n) : "—";
+}
+
+/** A score as "7/10", or "—" when there is none. */
+function formatScore(value: unknown): string {
+  const n = formatNumber(value);
+  return n === "—" ? n : `${n}/10`;
+}
+
 /** A stable, human-readable slug for downloaded filenames. */
 export function reportFilename(entry: HistoryEntry, extension: ReportFormat | "html" | "csv"): string {
   const slug =
-    entry.idea
+    String(entry.idea ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
@@ -55,6 +72,7 @@ export function reportFilename(entry: HistoryEntry, extension: ReportFormat | "h
 function sidesLines(sides: Disagreement["sides"]): string[] {
   if (!sides) return [];
   if (typeof sides === "string") return [sides];
+  if (typeof sides !== "object") return [String(sides)];
   return Object.entries(sides).map(([expert, view]) => `${expert}: ${String(view)}`);
 }
 
@@ -97,22 +115,22 @@ export function buildReportRows(entry: HistoryEntry, note: string): ReportRow[] 
   };
 
   push("Evaluation", "Idea", entry.idea, {
-    score: `${entry.score}/10`,
+    score: formatScore(entry.score),
     status: statusLabel(verdictStatus(entry.verdict, synthesis?.panel_unreachable)),
   });
   push("Evaluation", "Verdict", entry.verdict);
   push("Evaluation", "Generated", formatDate(entry.createdAt));
-  push("Evaluation", "Panel size", `${entry.panelSize} experts`);
-  push("Evaluation", "Domains detected", entry.domains.join(", ") || "none");
+  push("Evaluation", "Panel size", `${formatNumber(entry.panelSize)} experts`);
+  push("Evaluation", "Domains detected", (entry.domains ?? []).join(", ") || "none");
   if (synthesis?.consensus_percentage != null) {
-    push("Evaluation", "Agreement", `${synthesis.consensus_percentage}%`);
+    push("Evaluation", "Agreement", `${formatNumber(synthesis.consensus_percentage)}%`);
   }
   if (result.elapsed_seconds != null) {
-    push("Evaluation", "Elapsed", `${result.elapsed_seconds}s`);
+    push("Evaluation", "Elapsed", `${formatNumber(result.elapsed_seconds)}s`);
   }
 
   if (brief) {
-    push("Brief", "Checklist", `${brief.completed} of ${brief.total} sections complete`, {
+    push("Brief", "Checklist", `${formatNumber(brief.completed)} of ${formatNumber(brief.total)} sections complete`, {
       status: brief.requiredMet ? "Required complete" : "Required sections open",
     });
     if (brief.context) push("Brief", "Decision context", brief.context);
@@ -129,7 +147,7 @@ export function buildReportRows(entry: HistoryEntry, note: string): ReportRow[] 
   for (const persona of result.personas ?? []) {
     const lens = roleLens(personaRole(persona)).label;
     const status = statusLabel(personaStatus(persona));
-    const score = persona.analysis?._failed ? "" : `${persona.analysis?.score ?? ""}/10`;
+    const score = persona.analysis?._failed ? "" : formatScore(persona.analysis?.score);
     push("Panel", persona.name, persona.analysis?.headline ?? "", { role: lens, score, status });
     for (const strength of persona.analysis?.strengths ?? []) {
       push("Panel — in favour", persona.name, strength, { role: lens });
@@ -183,9 +201,16 @@ export function buildReportRows(entry: HistoryEntry, note: string): ReportRow[] 
 
 const CSV_HEADER = ["Section", "Role", "Item", "Detail", "Score", "Status"];
 
-function csvCell(value: string): string {
-  const text = value.replace(/\r?\n/g, " ").trim();
-  return /[",]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+/**
+ * One CSV cell. A cell a spreadsheet would read as a formula (= + - @, or a
+ * leading tab / carriage return) is prefixed with a single quote, so model- or
+ * user-written text can never execute when the export is opened.
+ */
+function csvCell(value: unknown): string {
+  const raw = String(value ?? "");
+  let text = raw.replace(/\r?\n/g, " ").trim();
+  if (/^[=+\-@\t\r]/.test(raw) || /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return /[",\t]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 export function buildReportCsv(entry: HistoryEntry, note: string): string {
@@ -195,12 +220,13 @@ export function buildReportCsv(entry: HistoryEntry, note: string): string {
   return "\uFEFF" + [CSV_HEADER.join(",")].concat(rows).join("\r\n") + "\r\n";
 }
 
-function escapeHtml(value: string): string {
-  return value
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function verdictInkVar(status: StatusId): string {
@@ -210,10 +236,11 @@ function verdictInkVar(status: StatusId): string {
   return "var(--doc-caution)";
 }
 
-function list(items: string[] | undefined, className = ""): string {
-  if (!items?.length) return `<p class="empty">Nothing identified.</p>`;
-  const attr = className ? ` class="${className}"` : "";
-  return `<ul${attr}>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+function list(items: unknown, className = ""): string {
+  const values: unknown[] = Array.isArray(items) ? items : typeof items === "string" && items ? [items] : [];
+  if (!values.length) return `<p class="empty">Nothing identified.</p>`;
+  const attr = className ? ` class="${escapeHtml(className)}"` : "";
+  return `<ul${attr}>${values.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
 }
 
 function expertBlock(persona: PersonaResult): string {
@@ -233,7 +260,7 @@ function expertBlock(persona: PersonaResult): string {
     <header>
       <h3>${escapeHtml(persona.name)}</h3>
       <span class="tag">${escapeHtml(lens)}</span>
-      <span class="score" style="color:${verdictInkVar(status)}">${analysis?.score ?? "–"}<small>/10</small></span>
+      <span class="score" style="color:${verdictInkVar(status)}">${escapeHtml(formatNumber(analysis?.score))}<small>/10</small></span>
     </header>
     <p class="role">${escapeHtml(persona.role)} · <strong style="color:${verdictInkVar(status)}">${escapeHtml(
       statusLabel(status),
@@ -271,7 +298,7 @@ export function buildReportHtml(entry: HistoryEntry, note: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DecisionX report — ${escapeHtml(entry.idea.slice(0, 70))}</title>
+<title>DecisionX report — ${escapeHtml(String(entry.idea ?? "").slice(0, 70))}</title>
 <style>
   :root {
     --doc-paper: #fbf9f4;
@@ -350,16 +377,16 @@ export function buildReportHtml(entry: HistoryEntry, note: string): string {
 <div class="sheet">
   <p class="wordmark">DecisionX — panel report</p>
   <h1>${escapeHtml(entry.idea)}</h1>
-  <p class="meta">${escapeHtml(formatDate(entry.createdAt))} · ${entry.panelSize} experts · ${
-    entry.domains.length ? escapeHtml(entry.domains.join(" · ")) : "no domain matched"
-  }${result.elapsed_seconds != null ? ` · ${result.elapsed_seconds}s` : ""}</p>
+  <p class="meta">${escapeHtml(formatDate(entry.createdAt))} · ${escapeHtml(formatNumber(entry.panelSize))} experts · ${
+    entry.domains?.length ? escapeHtml(entry.domains.join(" · ")) : "no domain matched"
+  }${result.elapsed_seconds != null ? ` · ${escapeHtml(formatNumber(result.elapsed_seconds))}s` : ""}</p>
 
   <div class="verdict-line">
-    <span class="big">${entry.score}</span>
+    <span class="big">${escapeHtml(formatNumber(entry.score))}</span>
     <span class="chip">${escapeHtml(entry.verdict)}</span>
     <span class="meta">${
       synthesis?.consensus_percentage != null
-        ? `${synthesis.consensus_percentage}% agreement across ${personas.length} experts`
+        ? `${escapeHtml(formatNumber(synthesis.consensus_percentage))}% agreement across ${personas.length} experts`
         : `${personas.length} experts`
     }</span>
   </div>
@@ -371,7 +398,9 @@ export function buildReportHtml(entry: HistoryEntry, note: string): string {
     <dl class="kv">
       ${
         brief
-          ? `<dt>Checklist</dt><dd>${brief.completed} of ${brief.total} sections complete${
+          ? `<dt>Checklist</dt><dd>${escapeHtml(formatNumber(brief.completed))} of ${escapeHtml(
+              formatNumber(brief.total),
+            )} sections complete${
               brief.requiredMet ? "" : " — required sections were left open"
             }</dd>`
           : ""
