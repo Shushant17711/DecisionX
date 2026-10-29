@@ -32,7 +32,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="decisionx">
+    // suppressHydrationWarning: browser extensions (e.g. "I don't care about
+    // cookies" adds `idc0_*`) mutate <html> attributes before hydration.
+    // Only silences this element's own attributes, not its children.
+    <html lang="en" data-theme="decisionx" suppressHydrationWarning>
       <body className={`${albert.variable} ${plexMono.variable} min-h-dvh`}>
         {children}
         <StorageNotice />
